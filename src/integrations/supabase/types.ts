@@ -378,6 +378,42 @@ export type Database = {
         }
         Relationships: []
       }
+      roster_profiles: {
+        Row: {
+          created_at: string
+          id: string
+          profile_id: string
+          roster_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          profile_id: string
+          roster_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          profile_id?: string
+          roster_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "roster_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "roster_profiles_roster_id_fkey"
+            columns: ["roster_id"]
+            isOneToOne: false
+            referencedRelation: "rosters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rosters: {
         Row: {
           client_id: string

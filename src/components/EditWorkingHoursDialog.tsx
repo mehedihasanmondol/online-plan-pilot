@@ -56,8 +56,8 @@ export const EditWorkingHoursDialog = ({
         date: workingHour.date,
         start_time: workingHour.start_time,
         end_time: workingHour.end_time,
-        sign_in_time: workingHour.sign_in_time || "",
-        sign_out_time: workingHour.sign_out_time || "",
+        sign_in_time: "", // Always start with empty sign in time
+        sign_out_time: "", // Always start with empty sign out time
         hourly_rate: workingHour.hourly_rate || 0,
         notes: workingHour.notes || "",
         status: workingHour.status
@@ -93,15 +93,20 @@ export const EditWorkingHoursDialog = ({
       const overtimeHours = Math.max(0, actualHours - totalHours);
       const payableAmount = actualHours * formData.hourly_rate;
       
+      const updateData: any = {
+        ...formData,
+        total_hours: totalHours,
+        actual_hours: actualHours,
+        overtime_hours: overtimeHours,
+        payable_amount: payableAmount,
+        // Set sign in/out times to null if empty
+        sign_in_time: formData.sign_in_time || null,
+        sign_out_time: formData.sign_out_time || null
+      };
+      
       const { error } = await supabase
         .from('working_hours')
-        .update({
-          ...formData,
-          total_hours: totalHours,
-          actual_hours: actualHours,
-          overtime_hours: overtimeHours,
-          payable_amount: payableAmount
-        })
+        .update(updateData)
         .eq('id', workingHour.id);
 
       if (error) throw error;
@@ -221,7 +226,7 @@ export const EditWorkingHoursDialog = ({
             </div>
 
             <div className="border-t pt-4">
-              <h4 className="font-medium text-gray-900 mb-2">Actual Hours</h4>
+              <h4 className="font-medium text-gray-900 mb-2">Actual Hours (Optional)</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="sign_in_time">Sign In Time</Label>
@@ -230,6 +235,7 @@ export const EditWorkingHoursDialog = ({
                     type="time"
                     value={formData.sign_in_time}
                     onChange={(e) => setFormData({ ...formData, sign_in_time: e.target.value })}
+                    placeholder="Leave empty if not available"
                   />
                 </div>
                 <div>
@@ -239,6 +245,7 @@ export const EditWorkingHoursDialog = ({
                     type="time"
                     value={formData.sign_out_time}
                     onChange={(e) => setFormData({ ...formData, sign_out_time: e.target.value })}
+                    placeholder="Leave empty if not available"
                   />
                 </div>
               </div>

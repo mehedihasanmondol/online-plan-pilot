@@ -100,6 +100,14 @@ export interface BankTransaction {
   bank_accounts?: BankAccount;
 }
 
+export interface RosterProfile {
+  id: string;
+  roster_id: string;
+  profile_id: string;
+  created_at: string;
+  profiles?: Profile;
+}
+
 export interface Roster {
   id: string;
   profile_id: string;
@@ -122,6 +130,7 @@ export interface Roster {
   profiles?: Profile;
   clients?: Client;
   projects?: Project;
+  roster_profiles?: RosterProfile[];
 }
 
 export interface Payroll {

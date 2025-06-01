@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Calendar, Clock, Users, DollarSign, Building2, FolderOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Roster as RosterType, Profile, Client, Project, WorkingHour } from "@/types/database";
@@ -25,9 +24,13 @@ export const RosterReport = () => {
         .from('rosters')
         .select(`
           *,
-          profiles!rosters_profile_id_fkey (id, full_name, role, hourly_rate),
           clients!rosters_client_id_fkey (id, company),
-          projects!rosters_project_id_fkey (id, name)
+          projects!rosters_project_id_fkey (id, name),
+          roster_profiles!roster_profiles_roster_id_fkey (
+            id,
+            profile_id,
+            profiles!roster_profiles_profile_id_fkey (id, full_name, role, hourly_rate)
+          )
         `)
         .eq('date', selectedDate)
         .order('start_time');
@@ -36,9 +39,9 @@ export const RosterReport = () => {
       
       const rostersData = (data || []).map(roster => ({
         ...roster,
-        profiles: Array.isArray(roster.profiles) ? roster.profiles[0] : roster.profiles,
         clients: Array.isArray(roster.clients) ? roster.clients[0] : roster.clients,
-        projects: Array.isArray(roster.projects) ? roster.projects[0] : roster.projects
+        projects: Array.isArray(roster.projects) ? roster.projects[0] : roster.projects,
+        roster_profiles: roster.roster_profiles || []
       }));
       
       setRosters(rostersData as RosterType[]);
@@ -73,7 +76,7 @@ export const RosterReport = () => {
 
   const getRosterStats = (roster: RosterType) => {
     const rosterWorkingHours = workingHours.filter(wh => wh.roster_id === roster.id);
-    const assignedProfiles = rosterWorkingHours.length;
+    const assignedProfiles = roster.roster_profiles?.length || 0;
     const pendingProfiles = rosterWorkingHours.filter(wh => wh.status === 'pending').length;
     const totalHours = rosterWorkingHours.reduce((sum, wh) => sum + (wh.actual_hours || wh.total_hours), 0);
     const totalPayable = rosterWorkingHours.reduce((sum, wh) => sum + (wh.payable_amount || 0), 0);
@@ -165,6 +168,23 @@ export const RosterReport = () => {
                       <div className="flex items-center gap-2">
                         <FolderOpen className="h-4 w-4 text-gray-500" />
                         <span className="text-sm text-gray-700">{roster.projects?.name}</span>
+                      </div>
+
+                      {/* Team Members */}
+                      <div className="space-y-2">
+                        <div className="text-sm font-medium text-gray-700">Team Members:</div>
+                        <div className="flex flex-wrap gap-1">
+                          {roster.roster_profiles?.slice(0, 3).map((rp) => (
+                            <span key={rp.id} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                              {rp.profiles?.full_name}
+                            </span>
+                          ))}
+                          {(roster.roster_profiles?.length || 0) > 3 && (
+                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded">
+                              +{(roster.roster_profiles?.length || 0) - 3} more
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="grid grid-cols-2 gap-3 pt-2 border-t">
