@@ -40,7 +40,7 @@ export const ProfileForm = ({ isOpen, onClose, onSubmit, editingProfile, loading
     salary: 0,
     tax_file_number: "",
     start_date: getCurrentDate(), // Set current date as default
-    password: "" // Add password field for new users
+    password: "" // Add password field for new users only
   });
 
   useEffect(() => {
@@ -84,8 +84,9 @@ export const ProfileForm = ({ isOpen, onClose, onSubmit, editingProfile, loading
       // Create new user through auth system
       await handleCreateNewUser();
     } else {
-      // Update existing profile
-      onSubmit(formData);
+      // Update existing profile - exclude password from update data
+      const { password, ...updateData } = formData;
+      onSubmit(updateData);
     }
   };
 
@@ -117,20 +118,10 @@ export const ProfileForm = ({ isOpen, onClose, onSubmit, editingProfile, loading
 
       if (authData.user) {
         // Update the profile with additional information
+        const { password, ...profileData } = formData;
         const { error: profileError } = await supabase
           .from('profiles')
-          .update({
-            full_name: formData.full_name,
-            phone: formData.phone,
-            role: formData.role,
-            is_active: formData.is_active,
-            full_address: formData.full_address,
-            employment_type: formData.employment_type,
-            hourly_rate: formData.hourly_rate,
-            salary: formData.salary,
-            tax_file_number: formData.tax_file_number,
-            start_date: formData.start_date
-          })
+          .update(profileData)
           .eq('id', authData.user.id);
 
         if (profileError) throw profileError;
