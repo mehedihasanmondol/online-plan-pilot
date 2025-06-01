@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -15,6 +14,7 @@ import { BankBalance } from "@/components/BankBalance";
 import { RolePermissionsManager } from "@/components/RolePermissionsManager";
 import { UserMenu } from "@/components/UserMenu";
 import { RoleDashboardRouter } from "@/components/RoleDashboardRouter";
+import { RosterReport } from "@/components/RosterReport";
 import { useAuth } from "@/hooks/useAuth";
 
 const Index = () => {
@@ -37,6 +37,8 @@ const Index = () => {
         return <WorkingHours />;
       case "roster":
         return <Roster />;
+      case "roster-report":
+        return <RosterReport />;
       case "payroll":
         return <PayrollComponent />;
       case "notifications":

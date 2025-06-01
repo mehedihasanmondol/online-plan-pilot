@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Clock, CheckCircle, XCircle, DollarSign, Timer } from "lucide-react";
+import { Plus, Search, Clock, CheckCircle, XCircle, DollarSign, Timer, Edit } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { WorkingHour, Profile, Client, Project } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileSelector } from "@/components/common/ProfileSelector";
+import { EditWorkingHoursDialog } from "@/components/EditWorkingHoursDialog";
 
 export const WorkingHours = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,6 +22,8 @@ export const WorkingHours = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingWorkingHour, setEditingWorkingHour] = useState<WorkingHour | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -59,7 +61,6 @@ export const WorkingHours = () => {
 
       if (error) throw error;
       
-      // Handle the data safely with proper type checking
       const workingHoursData = (data || []).map(wh => ({
         ...wh,
         profiles: Array.isArray(wh.profiles) ? wh.profiles[0] : wh.profiles,
@@ -212,6 +213,11 @@ export const WorkingHours = () => {
         variant: "destructive"
       });
     }
+  };
+
+  const handleEdit = (workingHour: WorkingHour) => {
+    setEditingWorkingHour(workingHour);
+    setIsEditDialogOpen(true);
   };
 
   const filteredWorkingHours = workingHours.filter(wh =>
@@ -527,26 +533,36 @@ export const WorkingHours = () => {
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
-                      {wh.status === "pending" && (
-                        <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => updateStatus(wh.id, "approved")}
-                            className="text-green-600 hover:text-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            onClick={() => updateStatus(wh.id, "rejected")}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex items-center gap-2">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => handleEdit(wh)}
+                          className="text-blue-600 hover:text-blue-700"
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {wh.status === "pending" && (
+                          <>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => updateStatus(wh.id, "approved")}
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={() => updateStatus(wh.id, "rejected")}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -555,6 +571,19 @@ export const WorkingHours = () => {
           </div>
         </CardContent>
       </Card>
+
+      <EditWorkingHoursDialog
+        workingHour={editingWorkingHour}
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingWorkingHour(null);
+        }}
+        onUpdate={fetchWorkingHours}
+        profiles={profiles}
+        clients={clients}
+        projects={projects}
+      />
     </div>
   );
 };

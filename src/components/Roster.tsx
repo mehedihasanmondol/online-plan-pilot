@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Search, Calendar, Clock, Users, DollarSign } from "lucide-react";
+import { Plus, Search, Calendar, Clock, Users, DollarSign, ChevronDown, ChevronUp, Eye } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Roster as RosterType, Profile, Client, Project } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { ProfileSelector } from "@/components/common/ProfileSelector";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 export const Roster = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -22,7 +22,23 @@ export const Roster = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isProfileSelectorOpen, setIsProfileSelectorOpen] = useState(false);
   const { toast } = useToast();
+
+  const generateDefaultRosterName = () => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+    const timeStr = now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+    return `Roster ${dateStr} ${timeStr}`;
+  };
 
   const [formData, setFormData] = useState({
     profile_id: "",
@@ -34,7 +50,7 @@ export const Roster = () => {
     end_time: "",
     notes: "",
     status: "pending",
-    name: "",
+    name: generateDefaultRosterName(),
     expected_profiles: 1,
     per_hour_rate: 0
   });
@@ -60,7 +76,6 @@ export const Roster = () => {
 
       if (error) throw error;
       
-      // Handle the data safely with proper type checking
       const rostersData = (data || []).map(roster => ({
         ...roster,
         profiles: Array.isArray(roster.profiles) ? roster.profiles[0] : roster.profiles,
@@ -158,7 +173,7 @@ export const Roster = () => {
       const selectedProject = projects.find(p => p.id === formData.project_id);
       
       const defaultName = generateDefaultName(selectedClient, selectedProject, formData.date);
-      const finalName = formData.name.trim() || defaultName;
+      const finalName = formData.name.trim() || defaultName || generateDefaultRosterName();
       
       const { error } = await supabase
         .from('rosters')
@@ -182,7 +197,7 @@ export const Roster = () => {
         end_time: "",
         notes: "",
         status: "pending",
-        name: "",
+        name: generateDefaultRosterName(),
         expected_profiles: 1,
         per_hour_rate: 0
       });
@@ -255,6 +270,8 @@ export const Roster = () => {
     (roster.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const selectedProfile = profiles.find(p => p.id === formData.profile_id);
+
   if (loading && rosters.length === 0) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
@@ -281,14 +298,69 @@ export const Roster = () => {
               <DialogTitle>Create Enhanced Roster</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <ProfileSelector
-                profiles={profiles}
-                selectedProfileId={formData.profile_id}
-                onProfileSelect={(profileId) => setFormData({ ...formData, profile_id: profileId })}
-                label="Select Profile"
-                placeholder="Choose a team member"
-                showRoleFilter={true}
-              />
+              <div>
+                <Label htmlFor="name">Roster Name</Label>
+                <Input
+                  id="name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="Auto-generated if left empty"
+                />
+                <p className="text-sm text-gray-500 mt-1">
+                  Default: {generateDefaultRosterName()}
+                </p>
+              </div>
+
+              <div>
+                <Label>Profile Selection</Label>
+                <Collapsible open={isProfileSelectorOpen} onOpenChange={setIsProfileSelectorOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      className="w-full justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Eye className="h-4 w-4" />
+                        {selectedProfile ? (
+                          <span>{selectedProfile.full_name} - {selectedProfile.role}</span>
+                        ) : (
+                          <span>Select Profile</span>
+                        )}
+                      </div>
+                      {isProfileSelectorOpen ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="space-y-2 mt-2">
+                    <ProfileSelector
+                      profiles={profiles}
+                      selectedProfileId={formData.profile_id}
+                      onProfileSelect={(profileId) => setFormData({ ...formData, profile_id: profileId })}
+                      label=""
+                      placeholder="Choose a team member"
+                      showRoleFilter={true}
+                      className="border rounded-lg p-3 bg-gray-50"
+                    />
+                    {selectedProfile && (
+                      <div className="p-3 bg-blue-50 rounded-lg border">
+                        <h4 className="font-medium text-blue-900">Selected Employee:</h4>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm"><strong>Name:</strong> {selectedProfile.full_name}</p>
+                          <p className="text-sm"><strong>Role:</strong> {selectedProfile.role}</p>
+                          <p className="text-sm"><strong>Hourly Rate:</strong> ${selectedProfile.hourly_rate || 0}/hr</p>
+                          {selectedProfile.email && (
+                            <p className="text-sm"><strong>Email:</strong> {selectedProfile.email}</p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
               
               <div>
                 <Label htmlFor="client_id">Client</Label>
@@ -320,25 +392,6 @@ export const Roster = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div>
-                <Label htmlFor="name">Roster Name (Optional)</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="Leave empty for auto-generated name"
-                />
-                {formData.client_id && formData.project_id && formData.date && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Auto-generated: {generateDefaultName(
-                      clients.find(c => c.id === formData.client_id),
-                      projects.find(p => p.id === formData.project_id),
-                      formData.date
-                    )}
-                  </p>
-                )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
