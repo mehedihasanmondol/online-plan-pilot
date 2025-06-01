@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from "react";
-import { Search, User, Eye, EyeOff, Check } from "lucide-react";
+import { Search, User, Eye, EyeOff, Check, List } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
@@ -157,40 +157,42 @@ export const MultipleProfileSelector = ({
           </CollapsibleContent>
         </Collapsible>
 
-        {/* View Selected Profiles */}
-        <Collapsible open={isViewOpen} onOpenChange={setIsViewOpen}>
-          <CollapsibleTrigger asChild>
-            <Button variant="outline" size="icon">
-              <Eye className="h-4 w-4" />
-            </Button>
-          </CollapsibleTrigger>
-        </Collapsible>
-      </div>
-
-      {/* Selected Profiles Display */}
-      {isViewOpen && selectedProfiles.length > 0 && (
-        <div className="border rounded-lg p-3 bg-blue-50">
-          <h4 className="font-medium text-blue-900 mb-2">
-            Selected Employees ({selectedProfiles.length})
-          </h4>
-          <div className="space-y-2">
-            {selectedProfiles.map((profile) => (
-              <div key={profile.id} className="flex items-center justify-between p-2 bg-white rounded border">
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-600" />
-                  <div>
-                    <div className="font-medium">{profile.full_name}</div>
-                    <div className="text-sm text-gray-600">
-                      {profile.role} • ${profile.hourly_rate || 0}/hr
+        {/* View Selected Profiles with List Icon */}
+        <div className="relative">
+          <Button 
+            variant="outline" 
+            size="icon"
+            onClick={() => setIsViewOpen(!isViewOpen)}
+          >
+            <List className="h-4 w-4" />
+          </Button>
+          
+          {/* Absolute positioned dropdown for selected profiles */}
+          {isViewOpen && selectedProfiles.length > 0 && (
+            <div className="absolute top-full right-0 mt-2 w-80 max-w-sm border rounded-lg p-3 bg-white shadow-lg z-50">
+              <h4 className="font-medium text-blue-900 mb-2">
+                Selected Employees ({selectedProfiles.length})
+              </h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {selectedProfiles.map((profile) => (
+                  <div key={profile.id} className="flex items-center justify-between p-2 bg-blue-50 rounded border">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-blue-600" />
+                      <div>
+                        <div className="font-medium">{profile.full_name}</div>
+                        <div className="text-sm text-gray-600">
+                          {profile.role} • ${profile.hourly_rate || 0}/hr
+                        </div>
+                      </div>
                     </div>
+                    <Badge variant="secondary">{profile.role}</Badge>
                   </div>
-                </div>
-                <Badge variant="secondary">{profile.role}</Badge>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {/* Quick Summary */}
       {selectedProfileIds.length > 0 && (
