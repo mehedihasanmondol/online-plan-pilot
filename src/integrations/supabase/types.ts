@@ -63,7 +63,7 @@ export type Database = {
         Row: {
           amount: number
           bank_account_id: string | null
-          category: string
+          category: Database["public"]["Enums"]["transaction_category"]
           client_id: string | null
           created_at: string
           date: string
@@ -77,7 +77,7 @@ export type Database = {
         Insert: {
           amount: number
           bank_account_id?: string | null
-          category: string
+          category: Database["public"]["Enums"]["transaction_category"]
           client_id?: string | null
           created_at?: string
           date?: string
@@ -91,7 +91,7 @@ export type Database = {
         Update: {
           amount?: number
           bank_account_id?: string | null
-          category?: string
+          category?: Database["public"]["Enums"]["transaction_category"]
           client_id?: string | null
           created_at?: string
           date?: string
@@ -201,6 +201,107 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      notification_permissions: {
+        Row: {
+          can_create_bulk_notifications: boolean
+          can_create_notifications: boolean
+          created_at: string
+          id: string
+          profile_id: string
+        }
+        Insert: {
+          can_create_bulk_notifications?: boolean
+          can_create_notifications?: boolean
+          created_at?: string
+          id?: string
+          profile_id: string
+        }
+        Update: {
+          can_create_bulk_notifications?: boolean
+          can_create_notifications?: boolean
+          created_at?: string
+          id?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_permissions_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          action_data: Json | null
+          action_type: string | null
+          actioned_at: string | null
+          created_at: string
+          id: string
+          is_actioned: boolean
+          is_read: boolean
+          message: string
+          priority: string
+          read_at: string | null
+          recipient_profile_id: string
+          related_id: string | null
+          sender_profile_id: string | null
+          title: string
+          type: string
+        }
+        Insert: {
+          action_data?: Json | null
+          action_type?: string | null
+          actioned_at?: string | null
+          created_at?: string
+          id?: string
+          is_actioned?: boolean
+          is_read?: boolean
+          message: string
+          priority?: string
+          read_at?: string | null
+          recipient_profile_id: string
+          related_id?: string | null
+          sender_profile_id?: string | null
+          title: string
+          type: string
+        }
+        Update: {
+          action_data?: Json | null
+          action_type?: string | null
+          actioned_at?: string | null
+          created_at?: string
+          id?: string
+          is_actioned?: boolean
+          is_read?: boolean
+          message?: string
+          priority?: string
+          read_at?: string | null
+          recipient_profile_id?: string
+          related_id?: string | null
+          sender_profile_id?: string | null
+          title?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_recipient_profile_id_fkey"
+            columns: ["recipient_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_sender_profile_id_fkey"
+            columns: ["sender_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payroll: {
         Row: {
@@ -647,6 +748,18 @@ export type Database = {
         | "reports_generate"
         | "notifications_view"
       employment_type: "full-time" | "part-time" | "casual"
+      transaction_category:
+        | "income"
+        | "expense"
+        | "transfer"
+        | "salary"
+        | "equipment"
+        | "materials"
+        | "travel"
+        | "office"
+        | "utilities"
+        | "marketing"
+        | "other"
       user_role:
         | "admin"
         | "employee"
@@ -791,6 +904,19 @@ export const Constants = {
         "notifications_view",
       ],
       employment_type: ["full-time", "part-time", "casual"],
+      transaction_category: [
+        "income",
+        "expense",
+        "transfer",
+        "salary",
+        "equipment",
+        "materials",
+        "travel",
+        "office",
+        "utilities",
+        "marketing",
+        "other",
+      ],
       user_role: [
         "admin",
         "employee",

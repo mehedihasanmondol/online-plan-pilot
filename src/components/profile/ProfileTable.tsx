@@ -1,16 +1,17 @@
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Edit, Trash2 } from "lucide-react";
+import { Edit, Trash2, CreditCard } from "lucide-react";
 import { Profile } from "@/types/database";
 
 interface ProfileTableProps {
   profiles: Profile[];
   onEdit: (profile: Profile) => void;
   onDelete: (id: string) => void;
+  onManageBank?: (profile: Profile) => void;
 }
 
-export const ProfileTable = ({ profiles, onEdit, onDelete }: ProfileTableProps) => {
+export const ProfileTable = ({ profiles, onEdit, onDelete, onManageBank }: ProfileTableProps) => {
   const getRoleLabel = (role: string) => {
     const roleLabels: Record<string, string> = {
       admin: 'Administrator',
@@ -60,6 +61,11 @@ export const ProfileTable = ({ profiles, onEdit, onDelete }: ProfileTableProps) 
                   <Button variant="ghost" size="sm" onClick={() => onEdit(profile)}>
                     <Edit className="h-4 w-4" />
                   </Button>
+                  {onManageBank && (
+                    <Button variant="ghost" size="sm" onClick={() => onManageBank(profile)}>
+                      <CreditCard className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700" onClick={() => onDelete(profile.id)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>

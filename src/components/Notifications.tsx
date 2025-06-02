@@ -3,199 +3,71 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Check, X, Clock, AlertCircle, CheckCircle2, Users, Calendar } from "lucide-react";
+import { Bell, Check, X, Clock, AlertCircle, CheckCircle2, Users, Calendar, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { WorkingHour, Roster as RosterType, Profile } from "@/types/database";
+import { Profile } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { NotificationCreateForm } from "./notifications/NotificationCreateForm";
 
 interface Notification {
   id: string;
-  type: 'working_hours_pending' | 'roster_pending' | 'payroll_due' | 'system';
+  type: 'working_hours_pending' | 'roster_pending' | 'payroll_due' | 'system' | 'custom';
   title: string;
   message: string;
   data?: any;
   created_at: string;
   read: boolean;
   priority: 'low' | 'medium' | 'high';
+  action_type: 'approve' | 'confirm' | 'grant' | 'cancel' | 'reject' | 'none';
+  related_id?: string;
+  is_actioned: boolean;
 }
 
 export const Notifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [canCreateNotifications, setCanCreateNotifications] = useState(false);
+  const [isCreateFormOpen, setIsCreateFormOpen] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
-    generateRealNotifications();
-    
-    // Set up real-time subscription for working hours
-    const workingHoursChannel = supabase
-      .channel('working-hours-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'working_hours'
-        },
-        (payload) => {
-          console.log('New working hours entry:', payload);
-          generateRealNotifications();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'working_hours'
-        },
-        (payload) => {
-          console.log('Working hours updated:', payload);
-          generateRealNotifications();
-        }
-      )
-      .subscribe();
+    if (user) {
+      fetchNotifications();
+      fetchProfiles();
+      checkNotificationPermissions();
+    }
+  }, [user]);
 
-    // Set up real-time subscription for rosters
-    const rostersChannel = supabase
-      .channel('rosters-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'rosters'
-        },
-        (payload) => {
-          console.log('New roster created:', payload);
-          generateRealNotifications();
-        }
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'rosters'
-        },
-        (payload) => {
-          console.log('Roster updated:', payload);
-          generateRealNotifications();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(workingHoursChannel);
-      supabase.removeChannel(rostersChannel);
-    };
-  }, []);
-
-  const generateRealNotifications = async () => {
+  const fetchNotifications = async () => {
     try {
-      const notifications: Notification[] = [];
-
-      // Fetch pending working hours
-      const { data: pendingWorkingHours, error: whError } = await supabase
-        .from('working_hours')
-        .select(`
-          *,
-          profiles!working_hours_profile_id_fkey (full_name),
-          projects!working_hours_project_id_fkey (name)
-        `)
-        .eq('status', 'pending')
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('recipient_profile_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (!whError && pendingWorkingHours) {
-        pendingWorkingHours.forEach((wh) => {
-          const profile = Array.isArray(wh.profiles) ? wh.profiles[0] : wh.profiles;
-          const project = Array.isArray(wh.projects) ? wh.projects[0] : wh.projects;
-          
-          notifications.push({
-            id: `wh-${wh.id}`,
-            type: 'working_hours_pending',
-            title: 'Working Hours Approval Required',
-            message: `${profile?.full_name || 'Unknown'} submitted working hours for ${project?.name || 'Unknown Project'} on ${new Date(wh.date).toLocaleDateString()}`,
-            data: wh,
-            created_at: wh.created_at,
-            read: false,
-            priority: 'medium'
-          });
-        });
-      }
+      if (error) throw error;
 
-      // Fetch pending rosters
-      const { data: pendingRosters, error: rosterError } = await supabase
-        .from('rosters')
-        .select(`
-          *,
-          profiles!rosters_profile_id_fkey (full_name),
-          projects!rosters_project_id_fkey (name),
-          clients!rosters_client_id_fkey (company)
-        `)
-        .eq('status', 'pending')
-        .order('created_at', { ascending: false });
+      const formattedNotifications = data?.map(n => ({
+        id: n.id,
+        type: n.type as any,
+        title: n.title,
+        message: n.message,
+        created_at: n.created_at,
+        read: n.is_read,
+        priority: n.priority as any,
+        action_type: n.action_type as any,
+        related_id: n.related_id,
+        is_actioned: n.is_actioned,
+        data: n.action_data
+      })) || [];
 
-      if (!rosterError && pendingRosters) {
-        pendingRosters.forEach((roster) => {
-          const profile = Array.isArray(roster.profiles) ? roster.profiles[0] : roster.profiles;
-          const project = Array.isArray(roster.projects) ? roster.projects[0] : roster.projects;
-          const client = Array.isArray(roster.clients) ? roster.clients[0] : roster.clients;
-          
-          notifications.push({
-            id: `roster-${roster.id}`,
-            type: 'roster_pending',
-            title: 'Roster Confirmation Required',
-            message: `New roster "${roster.name || 'Unnamed'}" for ${profile?.full_name || 'Unknown'} at ${client?.company || 'Unknown Client'} - ${project?.name || 'Unknown Project'}`,
-            data: roster,
-            created_at: roster.created_at,
-            read: false,
-            priority: 'high'
-          });
-        });
-      }
-
-      // Add system notifications
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-
-      // Check for upcoming rosters
-      const { data: upcomingRosters, error: upcomingError } = await supabase
-        .from('rosters')
-        .select(`
-          *,
-          profiles!rosters_profile_id_fkey (full_name),
-          projects!rosters_project_id_fkey (name)
-        `)
-        .eq('date', tomorrow.toISOString().split('T')[0])
-        .eq('status', 'confirmed');
-
-      if (!upcomingError && upcomingRosters && upcomingRosters.length > 0) {
-        notifications.push({
-          id: 'upcoming-rosters',
-          type: 'system',
-          title: 'Upcoming Rosters Tomorrow',
-          message: `${upcomingRosters.length} confirmed roster${upcomingRosters.length !== 1 ? 's' : ''} scheduled for tomorrow`,
-          data: upcomingRosters,
-          created_at: new Date().toISOString(),
-          read: false,
-          priority: 'low'
-        });
-      }
-
-      // Sort by priority and date
-      const sortedNotifications = notifications.sort((a, b) => {
-        const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
-        if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-          return priorityOrder[b.priority] - priorityOrder[a.priority];
-        }
-        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
-      });
-
-      setNotifications(sortedNotifications);
+      setNotifications(formattedNotifications);
     } catch (error) {
-      console.error('Error generating notifications:', error);
+      console.error('Error fetching notifications:', error);
       toast({
         title: "Error",
         description: "Failed to load notifications",
@@ -206,58 +78,135 @@ export const Notifications = () => {
     }
   };
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(n => 
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-    toast({ title: "Success", description: "All notifications marked as read" });
-  };
-
-  const approveWorkingHours = async (workingHourId: string, notificationId: string) => {
+  const fetchProfiles = async () => {
     try {
-      const { error } = await supabase
-        .from('working_hours')
-        .update({ status: 'approved' })
-        .eq('id', workingHourId);
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('is_active', true)
+        .order('full_name');
 
       if (error) throw error;
-      
-      markAsRead(notificationId);
-      toast({ title: "Success", description: "Working hours approved successfully" });
-      generateRealNotifications();
+      setProfiles(data || []);
     } catch (error) {
-      console.error('Error approving working hours:', error);
-      toast({
-        title: "Error",
-        description: "Failed to approve working hours",
-        variant: "destructive"
-      });
+      console.error('Error fetching profiles:', error);
     }
   };
 
-  const confirmRoster = async (rosterId: string, notificationId: string) => {
+  const checkNotificationPermissions = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notification_permissions')
+        .select('can_create_notifications, can_create_bulk_notifications')
+        .eq('profile_id', user?.id)
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      
+      setCanCreateNotifications(data?.can_create_notifications || false);
+    } catch (error) {
+      console.error('Error checking notification permissions:', error);
+    }
+  };
+
+  const markAsRead = async (notificationId: string) => {
     try {
       const { error } = await supabase
-        .from('rosters')
-        .update({ status: 'confirmed' })
-        .eq('id', rosterId);
+        .from('notifications')
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString() 
+        })
+        .eq('id', notificationId);
 
       if (error) throw error;
-      
-      markAsRead(notificationId);
-      toast({ title: "Success", description: "Roster confirmed successfully" });
-      generateRealNotifications();
+
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
     } catch (error) {
-      console.error('Error confirming roster:', error);
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_read: true, 
+          read_at: new Date().toISOString() 
+        })
+        .eq('recipient_profile_id', user?.id)
+        .eq('is_read', false);
+
+      if (error) throw error;
+
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      toast({ title: "Success", description: "All notifications marked as read" });
+    } catch (error) {
+      console.error('Error marking all as read:', error);
+    }
+  };
+
+  const executeAction = async (notification: Notification) => {
+    try {
+      let updateData: any = {};
+
+      switch (notification.action_type) {
+        case 'approve':
+          if (notification.type === 'working_hours_pending' && notification.related_id) {
+            const { error } = await supabase
+              .from('working_hours')
+              .update({ status: 'approved' })
+              .eq('id', notification.related_id);
+            if (error) throw error;
+          }
+          break;
+        
+        case 'confirm':
+          if (notification.type === 'roster_pending' && notification.related_id) {
+            const { error } = await supabase
+              .from('rosters')
+              .update({ status: 'confirmed' })
+              .eq('id', notification.related_id);
+            if (error) throw error;
+          }
+          break;
+      }
+
+      // Mark notification as actioned
+      const { error } = await supabase
+        .from('notifications')
+        .update({ 
+          is_actioned: true,
+          is_read: true,
+          actioned_at: new Date().toISOString(),
+          read_at: new Date().toISOString()
+        })
+        .eq('id', notification.id);
+
+      if (error) throw error;
+
+      setNotifications(prev => 
+        prev.map(n => 
+          n.id === notification.id 
+            ? { ...n, is_actioned: true, read: true } 
+            : n
+        )
+      );
+
+      toast({ 
+        title: "Success", 
+        description: `Action executed successfully` 
+      });
+    } catch (error: any) {
+      console.error('Error executing action:', error);
       toast({
         title: "Error",
-        description: "Failed to confirm roster",
+        description: error.message || "Failed to execute action",
         variant: "destructive"
       });
     }
@@ -288,7 +237,7 @@ export const Notifications = () => {
         <div className="flex items-center gap-3">
           <Bell className="h-8 w-8 text-blue-600" />
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Real-time Notifications</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Notifications</h1>
             <p className="text-gray-600">
               Stay updated with system events and pending actions
               {unreadCount > 0 && (
@@ -299,12 +248,20 @@ export const Notifications = () => {
             </p>
           </div>
         </div>
-        {unreadCount > 0 && (
-          <Button onClick={markAllAsRead} variant="outline">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Mark All Read
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {canCreateNotifications && (
+            <Button onClick={() => setIsCreateFormOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Create Notification
+            </Button>
+          )}
+          {unreadCount > 0 && (
+            <Button onClick={markAllAsRead} variant="outline">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Mark All Read
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Notification Stats */}
@@ -333,27 +290,27 @@ export const Notifications = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Working Hours</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-600">Pending Actions</CardTitle>
             <Clock className="h-4 w-4 text-purple-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-purple-600">
-              {notifications.filter(n => n.type === 'working_hours_pending').length}
+              {notifications.filter(n => !n.is_actioned && n.action_type !== 'none').length}
             </div>
-            <p className="text-xs text-muted-foreground">Pending approval</p>
+            <p className="text-xs text-muted-foreground">Require action</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-gray-600">Rosters</CardTitle>
-            <Calendar className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-gray-600">High Priority</CardTitle>
+            <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {notifications.filter(n => n.type === 'roster_pending').length}
+            <div className="text-2xl font-bold text-red-600">
+              {notifications.filter(n => n.priority === 'high').length}
             </div>
-            <p className="text-xs text-muted-foreground">Pending confirmation</p>
+            <p className="text-xs text-muted-foreground">High priority items</p>
           </CardContent>
         </Card>
       </div>
@@ -418,59 +375,38 @@ export const Notifications = () => {
                         </div>
                       </div>
 
-                      {/* Action buttons for specific notification types */}
-                      {!notification.read && (
+                      {/* Action buttons */}
+                      {!notification.is_actioned && notification.action_type !== 'none' && (
                         <div className="mt-3 flex items-center gap-2">
-                          {notification.type === 'working_hours_pending' && notification.data && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => approveWorkingHours(notification.data.id, notification.id)}
-                                className="text-green-600 hover:text-green-700"
-                              >
-                                <Check className="h-4 w-4 mr-1" />
-                                Approve
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                Mark Read
-                              </Button>
-                            </>
-                          )}
-                          
-                          {notification.type === 'roster_pending' && notification.data && (
-                            <>
-                              <Button
-                                size="sm"
-                                onClick={() => confirmRoster(notification.data.id, notification.id)}
-                                className="text-blue-600 hover:text-blue-700"
-                              >
-                                <Check className="h-4 w-4 mr-1" />
-                                Confirm
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => markAsRead(notification.id)}
-                              >
-                                Mark Read
-                              </Button>
-                            </>
-                          )}
-                          
-                          {notification.type === 'system' && (
+                          <Button
+                            size="sm"
+                            onClick={() => executeAction(notification)}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            {notification.action_type.charAt(0).toUpperCase() + notification.action_type.slice(1)}
+                          </Button>
+                          {!notification.read && (
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => markAsRead(notification.id)}
                             >
-                              <Check className="h-4 w-4 mr-1" />
                               Mark Read
                             </Button>
                           )}
+                        </div>
+                      )}
+
+                      {!notification.read && notification.action_type === 'none' && (
+                        <div className="mt-3">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Mark Read
+                          </Button>
                         </div>
                       )}
                     </div>
@@ -481,6 +417,13 @@ export const Notifications = () => {
           )}
         </CardContent>
       </Card>
+
+      <NotificationCreateForm
+        isOpen={isCreateFormOpen}
+        onClose={() => setIsCreateFormOpen(false)}
+        profiles={profiles}
+        onSuccess={fetchNotifications}
+      />
     </div>
   );
 };

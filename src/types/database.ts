@@ -86,7 +86,7 @@ export interface BankTransaction {
   description: string;
   amount: number;
   type: 'deposit' | 'withdrawal';
-  category: string;
+  category: 'income' | 'expense' | 'transfer' | 'salary' | 'equipment' | 'materials' | 'travel' | 'office' | 'utilities' | 'marketing' | 'other';
   date: string;
   created_at: string;
   updated_at: string;
@@ -146,11 +146,39 @@ export interface Payroll {
   status: 'pending' | 'approved' | 'paid';
   created_at: string;
   updated_at: string;
+  bank_account_id?: string;
   profiles?: Profile;
+  bank_accounts?: BankAccount;
 }
 
 export interface RolePermission {
   id: string;
   role: 'admin' | 'employee' | 'accountant' | 'operation' | 'sales_manager';
   permission: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  recipient_profile_id: string;
+  sender_profile_id?: string;
+  related_id?: string;
+  action_type: 'approve' | 'confirm' | 'grant' | 'cancel' | 'reject' | 'none';
+  action_data?: any;
+  is_read: boolean;
+  is_actioned: boolean;
+  priority: 'low' | 'medium' | 'high';
+  created_at: string;
+  read_at?: string;
+  actioned_at?: string;
+}
+
+export interface NotificationPermission {
+  id: string;
+  profile_id: string;
+  can_create_notifications: boolean;
+  can_create_bulk_notifications: boolean;
+  created_at: string;
 }
