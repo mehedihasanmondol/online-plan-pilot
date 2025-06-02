@@ -3,7 +3,8 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Edit, Trash2, CreditCard } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Plus, Edit, Trash2, CreditCard, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BankAccount } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -12,9 +13,11 @@ import { BankAccountForm } from "./BankAccountForm";
 interface BankAccountManagementProps {
   profileId: string;
   profileName: string;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
-export const BankAccountManagement = ({ profileId, profileName }: BankAccountManagementProps) => {
+export const BankAccountManagement = ({ profileId, profileName, isOpen, onClose }: BankAccountManagementProps) => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -23,8 +26,10 @@ export const BankAccountManagement = ({ profileId, profileName }: BankAccountMan
   const { toast } = useToast();
 
   useEffect(() => {
-    fetchBankAccounts();
-  }, [profileId]);
+    if (isOpen && profileId) {
+      fetchBankAccounts();
+    }
+  }, [profileId, isOpen]);
 
   const fetchBankAccounts = async () => {
     try {
@@ -119,82 +124,92 @@ export const BankAccountManagement = ({ profileId, profileName }: BankAccountMan
     }
   };
 
-  if (loading) {
-    return <div className="flex justify-center items-center h-32">Loading bank accounts...</div>;
-  }
+  if (!isOpen) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Bank Accounts - {profileName}
-          </CardTitle>
-          <Button onClick={() => setIsFormOpen(true)} size="sm">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Account
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {bankAccounts.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No bank accounts found</p>
-            <p className="text-sm">Add a bank account to get started</p>
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" />
+              Bank Accounts - {profileName}
+            </DialogTitle>
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              <X className="h-4 w-4" />
+            </Button>
           </div>
-        ) : (
-          <div className="space-y-4">
-            {bankAccounts.map((account) => (
-              <div key={account.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h3 className="font-semibold">{account.bank_name}</h3>
-                      {account.is_primary && (
-                        <Badge variant="default">Primary</Badge>
-                      )}
+        </DialogHeader>
+        
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-gray-600">Manage bank accounts for this profile</p>
+            <Button onClick={() => setIsFormOpen(true)} size="sm">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Account
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="flex justify-center items-center h-32">Loading bank accounts...</div>
+          ) : bankAccounts.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              <CreditCard className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+              <p>No bank accounts found</p>
+              <p className="text-sm">Add a bank account to get started</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {bankAccounts.map((account) => (
+                <div key={account.id} className="border rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <h3 className="font-semibold">{account.bank_name}</h3>
+                        {account.is_primary && (
+                          <Badge variant="default">Primary</Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
+                        <p><strong>Account:</strong> {account.account_number}</p>
+                        <p><strong>Holder:</strong> {account.account_holder_name}</p>
+                        {account.bsb_code && <p><strong>BSB:</strong> {account.bsb_code}</p>}
+                        {account.swift_code && <p><strong>SWIFT:</strong> {account.swift_code}</p>}
+                        <p><strong>Balance:</strong> ${(account.opening_balance || 0).toFixed(2)}</p>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm text-gray-600">
-                      <p><strong>Account:</strong> {account.account_number}</p>
-                      <p><strong>Holder:</strong> {account.account_holder_name}</p>
-                      {account.bsb_code && <p><strong>BSB:</strong> {account.bsb_code}</p>}
-                      {account.swift_code && <p><strong>SWIFT:</strong> {account.swift_code}</p>}
-                      <p><strong>Balance:</strong> ${(account.opening_balance || 0).toFixed(2)}</p>
+                    <div className="flex gap-2">
+                      <Button variant="ghost" size="sm" onClick={() => handleEdit(account)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDelete(account.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" size="sm" onClick={() => handleEdit(account)}>
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      className="text-red-600 hover:text-red-700"
-                      onClick={() => handleDelete(account.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
 
-        <BankAccountForm
-          isOpen={isFormOpen}
-          onClose={() => {
-            setIsFormOpen(false);
-            setEditingAccount(null);
-          }}
-          onSubmit={handleSubmit}
-          editingAccount={editingAccount}
-          loading={formLoading}
-          profileId={profileId}
-        />
-      </CardContent>
-    </Card>
+          <BankAccountForm
+            isOpen={isFormOpen}
+            onClose={() => {
+              setIsFormOpen(false);
+              setEditingAccount(null);
+            }}
+            onSubmit={handleSubmit}
+            editingAccount={editingAccount}
+            loading={formLoading}
+            profileId={profileId}
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 };

@@ -174,13 +174,12 @@ export const ProfileManagement = () => {
         loading={formLoading}
       />
 
-      {selectedProfileForBank && (
-        <BankAccountManagement
-          profileId={selectedProfileForBank.id}
-          profileName={selectedProfileForBank.full_name}
-          onClose={() => setSelectedProfileForBank(null)}
-        />
-      )}
+      <BankAccountManagement
+        profileId={selectedProfileForBank?.id || ""}
+        profileName={selectedProfileForBank?.full_name || ""}
+        isOpen={!!selectedProfileForBank}
+        onClose={() => setSelectedProfileForBank(null)}
+      />
     </div>
   );
 };

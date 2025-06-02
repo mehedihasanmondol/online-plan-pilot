@@ -30,7 +30,7 @@ export const WorkingHours = () => {
     profile_id: "",
     client_id: "",
     project_id: "",
-    date: "",
+    date: new Date().toISOString().split('T')[0], // Auto-fill with today's date
     start_time: "",
     end_time: "",
     sign_in_time: "",
@@ -46,6 +46,16 @@ export const WorkingHours = () => {
     fetchClients();
     fetchProjects();
   }, []);
+
+  // Auto-fill today's date when dialog opens
+  useEffect(() => {
+    if (isDialogOpen && !editingWorkingHour) {
+      setFormData(prev => ({
+        ...prev,
+        date: new Date().toISOString().split('T')[0]
+      }));
+    }
+  }, [isDialogOpen, editingWorkingHour]);
 
   const fetchWorkingHours = async () => {
     try {
@@ -150,16 +160,18 @@ export const WorkingHours = () => {
       const totalHours = calculateTotalHours(formData.start_time, formData.end_time);
       const actualHours = calculateActualHours(formData.sign_in_time, formData.sign_out_time);
       const overtimeHours = Math.max(0, actualHours - totalHours);
-      const payableAmount = actualHours * formData.hourly_rate;
+      const payableAmount = (actualHours || totalHours) * formData.hourly_rate;
       
       const { error } = await supabase
         .from('working_hours')
         .insert([{
           ...formData,
           total_hours: totalHours,
-          actual_hours: actualHours,
+          actual_hours: actualHours || null,
           overtime_hours: overtimeHours,
-          payable_amount: payableAmount
+          payable_amount: payableAmount,
+          sign_in_time: formData.sign_in_time || null,
+          sign_out_time: formData.sign_out_time || null
         }]);
 
       if (error) throw error;
@@ -170,7 +182,7 @@ export const WorkingHours = () => {
         profile_id: "",
         client_id: "",
         project_id: "",
-        date: "",
+        date: new Date().toISOString().split('T')[0], // Reset to today's date
         start_time: "",
         end_time: "",
         sign_in_time: "",
@@ -259,7 +271,7 @@ export const WorkingHours = () => {
                   setFormData({ 
                     ...formData, 
                     profile_id: profileId,
-                    hourly_rate: profile?.hourly_rate || 0
+                    hourly_rate: profile?.hourly_rate || 0 // Auto-suggest hourly rate
                   });
                 }}
                 label="Select Profile"
@@ -338,7 +350,7 @@ export const WorkingHours = () => {
                 </div>
 
                 <div className="border-t pt-4">
-                  <h4 className="font-medium text-gray-900 mb-2">Actual Hours</h4>
+                  <h4 className="font-medium text-gray-900 mb-2">Actual Hours (Optional)</h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="sign_in_time">Sign In Time</Label>
@@ -347,6 +359,7 @@ export const WorkingHours = () => {
                         type="time"
                         value={formData.sign_in_time}
                         onChange={(e) => setFormData({ ...formData, sign_in_time: e.target.value })}
+                        placeholder="Optional"
                       />
                     </div>
                     <div>
@@ -356,6 +369,7 @@ export const WorkingHours = () => {
                         type="time"
                         value={formData.sign_out_time}
                         onChange={(e) => setFormData({ ...formData, sign_out_time: e.target.value })}
+                        placeholder="Optional"
                       />
                     </div>
                   </div>
