@@ -179,8 +179,8 @@ export const PayrollQuickGenerate = ({
                 <Label htmlFor="profile">Employee</Label>
                 <ProfileSelector
                   profiles={profilesWithHours}
-                  selectedProfile={selectedProfile}
-                  onProfileChange={setSelectedProfile}
+                  selectedProfileId={selectedProfile}
+                  onProfileSelect={setSelectedProfile}
                 />
               </div>
 

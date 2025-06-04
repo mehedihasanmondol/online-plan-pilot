@@ -1,19 +1,19 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, DollarSign, Calendar, FileText, Clock, User, ChevronDown, ChevronUp } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Calendar, Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { WorkingHour as WorkingHourType, Profile, Client, Project } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
 import { format } from 'date-fns';
 import { DateRange } from "react-day-picker";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ProfileSelector } from "@/components/common/ProfileSelector";
 import { ClientSelector } from "@/components/common/ClientSelector";
 import { ProjectSelector } from "@/components/common/ProjectSelector";
@@ -32,7 +32,7 @@ export const DataTableToolbar: React.FC<DataTableToolbarProps> = ({ profiles, cl
   const [projectId, setProjectId] = useState<string>("");
   const [date, setDate] = useState<DateRange | undefined>(undefined);
   const [totalHours, setTotalHours] = useState<number>(0);
-  const [description, setDescription] = useState<string>("");
+  const [notes, setNotes] = useState<string>("");
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
 
@@ -51,11 +51,19 @@ export const DataTableToolbar: React.FC<DataTableToolbarProps> = ({ profiles, cl
       client_id: clientId,
       project_id: projectId,
       date: date.from.toISOString().split('T')[0],
-      start_time: date.from.toISOString(),
-      end_time: date.to.toISOString(),
+      start_time: date.from.toISOString().split('T')[1].split('.')[0],
+      end_time: date.to.toISOString().split('T')[1].split('.')[0],
       total_hours: totalHours,
-      description: description,
+      notes: notes,
       status: 'pending',
+      payable_amount: 0,
+      hourly_rate: 0,
+      overtime_hours: 0,
+      actual_hours: 0,
+      sign_in_time: null,
+      sign_out_time: null,
+      roster_id: null,
+      updated_at: new Date().toISOString()
     };
 
     await onAddWorkingHour(newWorkingHour as WorkingHourType);
@@ -65,7 +73,7 @@ export const DataTableToolbar: React.FC<DataTableToolbarProps> = ({ profiles, cl
     setProjectId("");
     setDate(undefined);
     setTotalHours(0);
-    setDescription("");
+    setNotes("");
   };
 
   return (
@@ -84,8 +92,8 @@ export const DataTableToolbar: React.FC<DataTableToolbarProps> = ({ profiles, cl
                 <Label htmlFor="profile">Employee</Label>
                 <ProfileSelector
                   profiles={profiles}
-                  selectedProfile={profileId}
-                  onProfileChange={setProfileId}
+                  selectedProfileId={profileId}
+                  onProfileSelect={setProfileId}
                 />
               </div>
               <div className="space-y-2">
@@ -150,12 +158,12 @@ export const DataTableToolbar: React.FC<DataTableToolbarProps> = ({ profiles, cl
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description</Label>
+                <Label htmlFor="notes">Notes</Label>
                 <Input
-                  id="description"
-                  placeholder="Enter description"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  id="notes"
+                  placeholder="Enter notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
                 />
               </div>
               <Button onClick={handleAddWorkingHour}>Add Working Hour</Button>
@@ -217,7 +225,7 @@ export const WorkingHours = ({ profile, clients, projects }: WorkingHoursProps) 
       const { data, error } = await supabase
         .from('working_hours')
         .insert([workingHour])
-        .select()
+        .select();
 
       if (error) throw error;
 
@@ -343,7 +351,7 @@ export const WorkingHours = ({ profile, clients, projects }: WorkingHoursProps) 
                         Project: {workingHour.projects?.name || 'Unknown'}
                       </div>
                       <div>
-                        Description: {workingHour.description}
+                        Notes: {workingHour.notes}
                       </div>
                     </div>
                   </div>
