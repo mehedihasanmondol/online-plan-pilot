@@ -28,8 +28,29 @@ export const PayrollListWithFilters = ({
   const [statusFilter, setStatusFilter] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+  const [dateShortcut, setDateShortcut] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  // Generate month options from current month back to January
+  const getMonthOptions = () => {
+    const currentDate = new Date();
+    const currentMonth = currentDate.getMonth();
+    const currentYear = currentDate.getFullYear();
+    const months = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    
+    const options = [];
+    for (let i = currentMonth; i >= 0; i--) {
+      options.push({
+        value: months[i].toLowerCase(),
+        label: months[i]
+      });
+    }
+    return options;
+  };
 
   // Date shortcuts
   const getDateShortcut = (shortcut: string) => {
@@ -59,27 +80,21 @@ export const PayrollListWithFilters = ({
           start: lastMonth.toISOString().split('T')[0],
           end: lastMonthEnd.toISOString().split('T')[0]
         };
-      case 'march':
-        return {
-          start: new Date(currentYear, 2, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 2, 31).toISOString().split('T')[0]
-        };
-      case 'april':
-        return {
-          start: new Date(currentYear, 3, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 3, 30).toISOString().split('T')[0]
-        };
-      case 'may':
-        return {
-          start: new Date(currentYear, 4, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 4, 31).toISOString().split('T')[0]
-        };
       case 'this-year':
         return {
           start: new Date(currentYear, 0, 1).toISOString().split('T')[0],
           end: new Date(currentYear, 11, 31).toISOString().split('T')[0]
         };
       default:
+        // Handle specific months
+        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+        const monthIndex = monthNames.indexOf(shortcut);
+        if (monthIndex !== -1) {
+          return {
+            start: new Date(currentYear, monthIndex, 1).toISOString().split('T')[0],
+            end: new Date(currentYear, monthIndex + 1, 0).toISOString().split('T')[0]
+          };
+        }
         return { start: "", end: "" };
     }
   };
@@ -88,6 +103,13 @@ export const PayrollListWithFilters = ({
     const { start, end } = getDateShortcut(shortcut);
     setStartDate(start);
     setEndDate(end);
+    setDateShortcut(shortcut);
+  };
+
+  const clearDateFilter = () => {
+    setStartDate("");
+    setEndDate("");
+    setDateShortcut("");
   };
 
   // Filter and search payrolls
@@ -124,71 +146,48 @@ export const PayrollListWithFilters = ({
       <CardHeader>
         <CardTitle>Payroll Records</CardTitle>
         
-        {/* Date Shortcuts */}
-        <div className="flex flex-wrap gap-2 mb-4">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('last-week')}
-          >
-            Last Week
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('current-week')}
-          >
-            Current Week
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('last-month')}
-          >
-            Last Month
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('march')}
-          >
-            March
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('april')}
-          >
-            April
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('may')}
-          >
-            May
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleDateShortcut('this-year')}
-          >
-            This Year
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => {
-              setStartDate("");
-              setEndDate("");
-            }}
-          >
-            Clear Dates
-          </Button>
-        </div>
-        
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <Label htmlFor="date-shortcut">Date Shortcut</Label>
+            <Select value={dateShortcut} onValueChange={handleDateShortcut}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select shortcut" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="last-week">Last Week</SelectItem>
+                <SelectItem value="current-week">Current Week</SelectItem>
+                <SelectItem value="last-month">Last Month</SelectItem>
+                {getMonthOptions().map((month) => (
+                  <SelectItem key={month.value} value={month.value}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+                <SelectItem value="this-year">This Year</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <Label htmlFor="start-date">Start Date</Label>
+            <Input
+              id="start-date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="end-date">End Date</Label>
+            <Input
+              id="end-date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
+          </div>
+
           <div>
             <Label htmlFor="search">Search Employee</Label>
             <div className="relative">
@@ -217,27 +216,15 @@ export const PayrollListWithFilters = ({
               </SelectContent>
             </Select>
           </div>
-
-          <div>
-            <Label htmlFor="start-date">Start Date</Label>
-            <Input
-              id="start-date"
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </div>
-
-          <div>
-            <Label htmlFor="end-date">End Date</Label>
-            <Input
-              id="end-date"
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </div>
         </div>
+
+        {(startDate || endDate || dateShortcut) && (
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={clearDateFilter}>
+              Clear Date Filter
+            </Button>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent>

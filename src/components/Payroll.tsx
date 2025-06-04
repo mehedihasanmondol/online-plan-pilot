@@ -1,15 +1,12 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, DollarSign, Calendar, FileText, Clock, User, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, DollarSign, Calendar, FileText, Clock, User } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Payroll as PayrollType, Profile, WorkingHour, BankAccount } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
-import { ProfileSelector } from "@/components/common/ProfileSelector";
 import { PayrollDetailsDialog } from "@/components/salary/PayrollDetailsDialog";
 import { BankSelectionDialog } from "@/components/payroll/BankSelectionDialog";
 import { PayrollListWithFilters } from "@/components/payroll/PayrollListWithFilters";
@@ -334,7 +331,7 @@ export const PayrollComponent = () => {
       <Tabs defaultValue="payroll-records" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="payroll-records">Payroll Records</TabsTrigger>
-          <TabsTrigger value="quick-generate">Quick Generate Payroll</TabsTrigger>
+          <TabsTrigger value="employees-with-hours">Employees with Approved Hours</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payroll-records">
@@ -347,13 +344,51 @@ export const PayrollComponent = () => {
           />
         </TabsContent>
 
-        <TabsContent value="quick-generate">
-          <PayrollQuickGenerate
-            profiles={profiles}
-            profilesWithHours={profilesWithHours}
-            workingHours={workingHours}
-            onRefresh={fetchPayrolls}
-          />
+        <TabsContent value="employees-with-hours">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  Employees with Approved Hours
+                </CardTitle>
+                <PayrollQuickGenerate
+                  profiles={profiles}
+                  profilesWithHours={profilesWithHours}
+                  workingHours={workingHours}
+                  onRefresh={fetchPayrolls}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {profilesWithHours.length === 0 ? (
+                  <p className="text-gray-500 text-center py-4">
+                    No employees have approved working hours available
+                  </p>
+                ) : (
+                  profilesWithHours.map((profile) => {
+                    const profileHours = workingHours.filter(wh => wh.profile_id === profile.id);
+                    const totalHours = profileHours.reduce((sum, wh) => sum + wh.total_hours, 0);
+                    const avgRate = profileHours.length > 0 
+                      ? profileHours.reduce((sum, wh) => sum + (wh.hourly_rate || 0), 0) / profileHours.length
+                      : 0;
+                    
+                    return (
+                      <div key={profile.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div>
+                          <div className="font-medium">{profile.full_name}</div>
+                          <div className="text-sm text-gray-600">
+                            {profile.role} - {totalHours.toFixed(1)}h available at avg ${avgRate.toFixed(2)}/hr
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
 
