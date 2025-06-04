@@ -119,7 +119,7 @@ export const PayrollDetailsDialog = ({ payroll, isOpen, onClose }: PayrollDetail
           </div>
 
           <div class="section">
-            <h3>Summary</h3>
+            <h3>Payment Summary</h3>
             <table>
               <tr><td>Total Hours</td><td>${payroll.total_hours}</td></tr>
               <tr><td>Hourly Rate</td><td>$${payroll.hourly_rate.toFixed(2)}</td></tr>
@@ -131,11 +131,14 @@ export const PayrollDetailsDialog = ({ payroll, isOpen, onClose }: PayrollDetail
 
           ${bankAccount ? `
           <div class="section">
-            <h3>Bank Details</h3>
+            <h3>Payment Bank Details</h3>
             <table>
-              <tr><td>Bank</td><td>${bankAccount.bank_name}</td></tr>
+              <tr><td>Bank Name</td><td>${bankAccount.bank_name}</td></tr>
               <tr><td>Account Number</td><td>${bankAccount.account_number}</td></tr>
               <tr><td>Account Holder</td><td>${bankAccount.account_holder_name}</td></tr>
+              ${bankAccount.bsb_code ? `<tr><td>BSB Code</td><td>${bankAccount.bsb_code}</td></tr>` : ''}
+              ${bankAccount.swift_code ? `<tr><td>SWIFT Code</td><td>${bankAccount.swift_code}</td></tr>` : ''}
+              <tr><td>Payment Status</td><td>${payroll.status === 'paid' ? 'PAID' : 'PENDING'}</td></tr>
             </table>
           </div>
           ` : ''}
@@ -242,27 +245,47 @@ export const PayrollDetailsDialog = ({ payroll, isOpen, onClose }: PayrollDetail
             </CardContent>
           </Card>
 
-          {/* Bank Details */}
+          {/* Payment Bank Details */}
           {bankAccount && (
             <Card className="print:shadow-none print:border">
               <CardHeader className="pb-3 print:pb-2">
                 <CardTitle className="flex items-center gap-2 text-lg print:text-base">
                   <Building2 className="h-5 w-5 text-blue-600" />
-                  Bank Details
+                  Payment Bank Details
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-2 gap-4 print:gap-2 text-sm">
-                <div>
-                  <span className="text-gray-600">Bank:</span>
-                  <div className="font-medium">{bankAccount.bank_name}</div>
-                </div>
-                <div>
-                  <span className="text-gray-600">Account Number:</span>
-                  <div className="font-medium">{bankAccount.account_number}</div>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-gray-600">Account Holder:</span>
-                  <div className="font-medium">{bankAccount.account_holder_name}</div>
+              <CardContent className="space-y-3 print:space-y-2">
+                <div className="grid grid-cols-2 gap-4 print:gap-2 text-sm">
+                  <div>
+                    <span className="text-gray-600">Bank Name:</span>
+                    <div className="font-medium">{bankAccount.bank_name}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Account Number:</span>
+                    <div className="font-medium">{bankAccount.account_number}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Account Holder:</span>
+                    <div className="font-medium">{bankAccount.account_holder_name}</div>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Payment Status:</span>
+                    <div className={`font-medium ${payroll.status === 'paid' ? 'text-green-600' : 'text-orange-600'}`}>
+                      {payroll.status === 'paid' ? 'PAID' : 'PENDING'}
+                    </div>
+                  </div>
+                  {bankAccount.bsb_code && (
+                    <div>
+                      <span className="text-gray-600">BSB Code:</span>
+                      <div className="font-medium">{bankAccount.bsb_code}</div>
+                    </div>
+                  )}
+                  {bankAccount.swift_code && (
+                    <div>
+                      <span className="text-gray-600">SWIFT Code:</span>
+                      <div className="font-medium">{bankAccount.swift_code}</div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>

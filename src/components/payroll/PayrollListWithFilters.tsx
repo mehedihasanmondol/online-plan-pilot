@@ -1,19 +1,19 @@
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Calendar, Eye, DollarSign } from "lucide-react";
-import type { Payroll } from "@/types/database";
+import { Badge } from "@/components/ui/badge";
+import { Search, Calendar, Plus } from "lucide-react";
+import type { Payroll as PayrollType } from "@/types/database";
 
 interface PayrollListWithFiltersProps {
-  payrolls: Payroll[];
-  onViewPayroll: (payroll: Payroll) => void;
-  onMarkAsPaid: (payroll: Payroll) => void;
-  onApprove: (payrollId: string) => void;
+  payrolls: PayrollType[];
+  onViewPayroll: (payroll: PayrollType) => void;
+  onMarkAsPaid: (payroll: PayrollType) => void;
+  onApprove: (id: string) => void;
+  onCreatePayroll: () => void;
   loading: boolean;
 }
 
@@ -21,317 +21,285 @@ export const PayrollListWithFilters = ({
   payrolls, 
   onViewPayroll, 
   onMarkAsPaid, 
-  onApprove, 
+  onApprove,
+  onCreatePayroll,
   loading 
 }: PayrollListWithFiltersProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [dateShortcut, setDateShortcut] = useState("current-week");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [dateShortcut, setDateShortcut] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
 
-  // Generate month options from current month back to January
-  const getMonthOptions = () => {
-    const currentDate = new Date();
-    const currentMonth = currentDate.getMonth();
-    const currentYear = currentDate.getFullYear();
-    const months = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
-    ];
+  // Set default dates to current week
+  useEffect(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const mondayDate = new Date(today);
+    mondayDate.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
     
-    const options = [];
-    for (let i = currentMonth; i >= 0; i--) {
-      options.push({
-        value: months[i].toLowerCase(),
-        label: months[i]
-      });
-    }
-    return options;
-  };
-
-  // Date shortcuts
-  const getDateShortcut = (shortcut: string) => {
-    const now = new Date();
-    const currentYear = now.getFullYear();
-    const currentMonth = now.getMonth();
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(mondayDate.getDate() + 6);
     
-    switch (shortcut) {
-      case 'last-week':
-        const lastWeek = new Date(now);
-        lastWeek.setDate(now.getDate() - 7);
-        return {
-          start: lastWeek.toISOString().split('T')[0],
-          end: now.toISOString().split('T')[0]
-        };
-      case 'current-week':
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay());
-        return {
-          start: startOfWeek.toISOString().split('T')[0],
-          end: now.toISOString().split('T')[0]
-        };
-      case 'last-month':
-        const lastMonth = new Date(currentYear, currentMonth - 1, 1);
-        const lastMonthEnd = new Date(currentYear, currentMonth, 0);
-        return {
-          start: lastMonth.toISOString().split('T')[0],
-          end: lastMonthEnd.toISOString().split('T')[0]
-        };
-      case 'this-year':
-        return {
-          start: new Date(currentYear, 0, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 11, 31).toISOString().split('T')[0]
-        };
-      default:
-        // Handle specific months
-        const monthNames = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
-        const monthIndex = monthNames.indexOf(shortcut);
-        if (monthIndex !== -1) {
-          return {
-            start: new Date(currentYear, monthIndex, 1).toISOString().split('T')[0],
-            end: new Date(currentYear, monthIndex + 1, 0).toISOString().split('T')[0]
-          };
-        }
-        return { start: "", end: "" };
-    }
-  };
+    setStartDate(mondayDate.toISOString().split('T')[0]);
+    setEndDate(sundayDate.toISOString().split('T')[0]);
+  }, []);
 
   const handleDateShortcut = (shortcut: string) => {
-    const { start, end } = getDateShortcut(shortcut);
-    setStartDate(start);
-    setEndDate(end);
     setDateShortcut(shortcut);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    
+    let start: Date, end: Date;
+    
+    switch (shortcut) {
+      case "last-week":
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - today.getDay() - 6);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        start = lastWeekStart;
+        end = lastWeekEnd;
+        break;
+        
+      case "current-week":
+        const currentDay = today.getDay();
+        const mondayDate = new Date(today);
+        mondayDate.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+        const sundayDate = new Date(mondayDate);
+        sundayDate.setDate(mondayDate.getDate() + 6);
+        start = mondayDate;
+        end = sundayDate;
+        break;
+        
+      case "last-month":
+        start = new Date(currentYear, currentMonth - 1, 1);
+        end = new Date(currentYear, currentMonth, 0);
+        break;
+        
+      case "this-year":
+        start = new Date(currentYear, 0, 1);
+        end = new Date(currentYear, 11, 31);
+        break;
+        
+      default:
+        // Handle month shortcuts (january, february, etc.)
+        const monthNames = [
+          "january", "february", "march", "april", "may", "june",
+          "july", "august", "september", "october", "november", "december"
+        ];
+        const monthIndex = monthNames.indexOf(shortcut.toLowerCase());
+        if (monthIndex !== -1) {
+          start = new Date(currentYear, monthIndex, 1);
+          end = new Date(currentYear, monthIndex + 1, 0);
+        } else {
+          return;
+        }
+    }
+    
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
   };
 
-  const clearDateFilter = () => {
-    setStartDate("");
-    setEndDate("");
-    setDateShortcut("");
+  const filteredPayrolls = payrolls.filter(payroll => {
+    const matchesSearch = payroll.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || payroll.status === statusFilter;
+    
+    let matchesDate = true;
+    if (startDate && endDate) {
+      const payrollStart = new Date(payroll.pay_period_start);
+      const payrollEnd = new Date(payroll.pay_period_end);
+      const filterStart = new Date(startDate);
+      const filterEnd = new Date(endDate);
+      
+      matchesDate = (payrollStart >= filterStart && payrollStart <= filterEnd) ||
+                   (payrollEnd >= filterStart && payrollEnd <= filterEnd) ||
+                   (payrollStart <= filterStart && payrollEnd >= filterEnd);
+    }
+    
+    return matchesSearch && matchesStatus && matchesDate;
+  });
+
+  const generateShortcutOptions = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    
+    const options = [
+      { value: "last-week", label: "Last Week" },
+      { value: "current-week", label: "Current Week" },
+      { value: "last-month", label: "Last Month" },
+    ];
+    
+    // Add months from current month down to January
+    for (let i = currentMonth; i >= 0; i--) {
+      options.push({
+        value: monthNames[i].toLowerCase(),
+        label: monthNames[i]
+      });
+    }
+    
+    options.push({ value: "this-year", label: "This Year" });
+    
+    return options;
   };
-
-  // Filter and search payrolls
-  const filteredPayrolls = useMemo(() => {
-    return payrolls.filter((payroll) => {
-      const matchesSearch = payroll.profiles?.full_name
-        ?.toLowerCase()
-        .includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === "all" || payroll.status === statusFilter;
-      
-      const matchesDateRange = 
-        (!startDate || payroll.pay_period_start >= startDate) &&
-        (!endDate || payroll.pay_period_end <= endDate);
-
-      return matchesSearch && matchesStatus && matchesDateRange;
-    });
-  }, [payrolls, searchTerm, statusFilter, startDate, endDate]);
-
-  // Pagination
-  const totalPages = Math.ceil(filteredPayrolls.length / itemsPerPage);
-  const paginatedPayrolls = filteredPayrolls.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
-
-  // Reset page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, statusFilter, startDate, endDate]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Payroll Records</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle>Payroll Records</CardTitle>
+          <Button onClick={onCreatePayroll} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Create Payroll
+          </Button>
+        </div>
         
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <Label htmlFor="date-shortcut">Date Shortcut</Label>
-            <Select value={dateShortcut} onValueChange={handleDateShortcut}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select shortcut" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="last-week">Last Week</SelectItem>
-                <SelectItem value="current-week">Current Week</SelectItem>
-                <SelectItem value="last-month">Last Month</SelectItem>
-                {getMonthOptions().map((month) => (
-                  <SelectItem key={month.value} value={month.value}>
-                    {month.label}
-                  </SelectItem>
-                ))}
-                <SelectItem value="this-year">This Year</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div>
-            <Label htmlFor="start-date">Start Date</Label>
+        <div className="flex flex-wrap items-center gap-4 mt-4">
+          <Select value={dateShortcut} onValueChange={handleDateShortcut}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Date shortcut" />
+            </SelectTrigger>
+            <SelectContent>
+              {generateShortcutOptions().map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-gray-500" />
             <Input
-              id="start-date"
               type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
+              className="w-40"
+              placeholder="Start Date"
             />
-          </div>
-
-          <div>
-            <Label htmlFor="end-date">End Date</Label>
+            <span className="text-gray-500">to</span>
             <Input
-              id="end-date"
               type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
+              className="w-40"
+              placeholder="End Date"
             />
           </div>
-
-          <div>
-            <Label htmlFor="search">Search Employee</Label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                id="search"
-                placeholder="Search by name..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-
-          <div>
-            <Label htmlFor="status">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {(startDate || endDate || dateShortcut) && (
+          
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={clearDateFilter}>
-              Clear Date Filter
-            </Button>
+            <Search className="h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search employees..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-64"
+            />
+          </div>
+          
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-32">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </CardHeader>
+      
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center items-center h-32">
+            <div className="text-gray-500">Loading payroll records...</div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Employee</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Pay Period</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Hours</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Gross Pay</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Net Pay</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Status</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-600">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredPayrolls.map((payroll) => (
+                  <tr key={payroll.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <td className="py-3 px-4">
+                      <div>
+                        <div className="font-medium">{payroll.profiles?.full_name || 'N/A'}</div>
+                        <div className="text-sm text-gray-600">{payroll.profiles?.role || 'N/A'}</div>
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-sm">
+                      {new Date(payroll.pay_period_start).toLocaleDateString()} - {new Date(payroll.pay_period_end).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-4">{payroll.total_hours}</td>
+                    <td className="py-3 px-4">${payroll.gross_pay.toFixed(2)}</td>
+                    <td className="py-3 px-4 font-medium text-green-600">${payroll.net_pay.toFixed(2)}</td>
+                    <td className="py-3 px-4">
+                      <Badge variant={
+                        payroll.status === 'paid' ? 'default' :
+                        payroll.status === 'approved' ? 'secondary' : 'outline'
+                      }>
+                        {payroll.status}
+                      </Badge>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => onViewPayroll(payroll)}
+                        >
+                          View Details
+                        </Button>
+                        {payroll.status === 'pending' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => onApprove(payroll.id)}
+                          >
+                            Approve
+                          </Button>
+                        )}
+                        {payroll.status === 'approved' && (
+                          <Button
+                            size="sm"
+                            onClick={() => onMarkAsPaid(payroll)}
+                          >
+                            Mark as Paid
+                          </Button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {filteredPayrolls.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="text-center py-8 text-gray-500">
+                      No payroll records found
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
         )}
-      </CardHeader>
-
-      <CardContent>
-        <div className="space-y-4">
-          {/* Results summary */}
-          <div className="text-sm text-gray-600">
-            Showing {paginatedPayrolls.length} of {filteredPayrolls.length} records
-          </div>
-
-          {/* Payroll list */}
-          {paginatedPayrolls.map((payroll) => (
-            <div key={payroll.id} className="border rounded-lg p-4 hover:bg-gray-50">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-medium text-lg">{payroll.profiles?.full_name || 'Unknown'}</h3>
-                    <Badge variant={
-                      payroll.status === "paid" ? "default" : 
-                      payroll.status === "approved" ? "secondary" : "outline"
-                    }>
-                      {payroll.status}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-4 w-4" />
-                      {new Date(payroll.pay_period_start).toLocaleDateString()} - {new Date(payroll.pay_period_end).toLocaleDateString()}
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <DollarSign className="h-4 w-4" />
-                      Net: ${payroll.net_pay.toLocaleString()}
-                    </div>
-                    <div>
-                      Hours: {payroll.total_hours}h @ ${payroll.hourly_rate}/hr
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => onViewPayroll(payroll)}
-                  >
-                    <Eye className="h-4 w-4 mr-1" />
-                    Details
-                  </Button>
-                  
-                  {payroll.status === "pending" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => onApprove(payroll.id)}
-                      disabled={loading}
-                    >
-                      Approve
-                    </Button>
-                  )}
-                  
-                  {payroll.status === "approved" && (
-                    <Button
-                      size="sm"
-                      onClick={() => onMarkAsPaid(payroll)}
-                      disabled={loading}
-                    >
-                      Mark Paid
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-
-          {filteredPayrolls.length === 0 && (
-            <div className="text-center py-8 text-gray-500">
-              No payroll records found matching your criteria.
-            </div>
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-              >
-                Previous
-              </Button>
-              
-              <span className="flex items-center px-3 text-sm">
-                Page {currentPage} of {totalPages}
-              </span>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-              >
-                Next
-              </Button>
-            </div>
-          )}
-        </div>
       </CardContent>
     </Card>
   );

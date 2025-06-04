@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -260,6 +259,11 @@ export const PayrollComponent = () => {
     setShowPayrollDetails(true);
   };
 
+  const handleCreatePayroll = () => {
+    // This will trigger the PayrollQuickGenerate dialog
+    // We can pass this function to both tabs
+  };
+
   if (loading && payrolls.length === 0) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
@@ -340,6 +344,7 @@ export const PayrollComponent = () => {
             onViewPayroll={handleViewPayroll}
             onMarkAsPaid={handleMarkAsPaid}
             onApprove={(id) => updatePayrollStatus(id, "approved")}
+            onCreatePayroll={() => {}} // This will open the PayrollQuickGenerate dialog
             loading={loading}
           />
         </TabsContent>
