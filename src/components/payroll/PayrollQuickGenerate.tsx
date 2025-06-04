@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -313,10 +312,115 @@ export const PayrollQuickGenerate = ({
       {/* Quick Generate for Employees with Hours */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User className="h-5 w-5" />
-            Employees with Approved Hours
-          </CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <User className="h-5 w-5" />
+              Employees with Approved Hours
+            </CardTitle>
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Create Payroll
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle>Create Payroll Record</DialogTitle>
+                </DialogHeader>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <ProfileSelector
+                    profiles={profiles}
+                    selectedProfileId={formData.profile_id}
+                    onProfileSelect={(profileId) => setFormData({ ...formData, profile_id: profileId })}
+                    label="Select Profile"
+                    placeholder="Choose an employee"
+                    showRoleFilter={true}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="pay_period_start">Period Start</Label>
+                      <Input
+                        id="pay_period_start"
+                        type="date"
+                        value={formData.pay_period_start}
+                        onChange={(e) => setFormData({ ...formData, pay_period_start: e.target.value })}
+                        required
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="pay_period_end">Period End</Label>
+                      <Input
+                        id="pay_period_end"
+                        type="date"
+                        value={formData.pay_period_end}
+                        onChange={(e) => setFormData({ ...formData, pay_period_end: e.target.value })}
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="total_hours">Total Hours (Auto-calculated)</Label>
+                      <Input
+                        id="total_hours"
+                        type="number"
+                        step="0.5"
+                        value={formData.total_hours}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="hourly_rate">Average Hourly Rate (Auto-calculated)</Label>
+                      <Input
+                        id="hourly_rate"
+                        type="number"
+                        step="0.01"
+                        value={formData.hourly_rate}
+                        readOnly
+                        className="bg-gray-50"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="deductions">Deductions</Label>
+                    <Input
+                      id="deductions"
+                      type="number"
+                      step="0.01"
+                      value={formData.deductions}
+                      onChange={(e) => setFormData({ ...formData, deductions: parseFloat(e.target.value) || 0 })}
+                    />
+                  </div>
+
+                  {formData.total_hours > 0 && formData.hourly_rate > 0 && (
+                    <div className="bg-gray-50 p-3 rounded">
+                      <div className="flex justify-between text-sm">
+                        <span>Gross Pay:</span>
+                        <span>${(formData.total_hours * formData.hourly_rate).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Deductions:</span>
+                        <span>-${formData.deductions.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between font-medium">
+                        <span>Net Pay:</span>
+                        <span>${(formData.total_hours * formData.hourly_rate - formData.deductions).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button type="submit" disabled={loading} className="w-full">
+                    {loading ? "Creating..." : "Create Payroll"}
+                  </Button>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">

@@ -23,6 +23,7 @@ export const WorkingHoursComponent = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingWorkingHours, setEditingWorkingHours] = useState<WorkingHour | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedWorkingHour, setSelectedWorkingHour] = useState<WorkingHour | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -144,12 +145,28 @@ export const WorkingHoursComponent = () => {
     setIsEditDialogOpen(true);
   };
 
+  const openEditDialog = (workingHour: WorkingHour) => {
+    setSelectedWorkingHour(workingHour);
+    setIsEditDialogOpen(true);
+  };
+
   const handleUpdate = async (updatedData: WorkingHour) => {
     setLoading(true);
     try {
       const { error } = await supabase
         .from('working_hours')
-        .update(updatedData)
+        .update({
+          client_id: updatedData.client_id,
+          project_id: updatedData.project_id,
+          date: updatedData.date,
+          start_time: updatedData.start_time,
+          end_time: updatedData.end_time,
+          total_hours: updatedData.total_hours,
+          sign_in_time: updatedData.sign_in_time,
+          sign_out_time: updatedData.sign_out_time,
+          hourly_rate: updatedData.hourly_rate,
+          notes: updatedData.notes
+        })
         .eq('id', updatedData.id);
 
       if (error) throw error;
@@ -166,6 +183,44 @@ export const WorkingHoursComponent = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateWorkingHour = async (updatedData: WorkingHour) => {
+    try {
+      const { error } = await supabase
+        .from('working_hours')
+        .update({
+          client_id: updatedData.client_id,
+          project_id: updatedData.project_id,
+          date: updatedData.date,
+          start_time: updatedData.start_time,
+          end_time: updatedData.end_time,
+          total_hours: updatedData.total_hours,
+          sign_in_time: updatedData.sign_in_time,
+          sign_out_time: updatedData.sign_out_time,
+          hourly_rate: updatedData.hourly_rate,
+          notes: updatedData.notes
+        })
+        .eq('id', updatedData.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Working hours updated successfully"
+      });
+
+      setIsEditDialogOpen(false);
+      setSelectedWorkingHour(null);
+      fetchWorkingHours();
+    } catch (error) {
+      console.error('Error updating working hours:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update working hours",
+        variant: "destructive"
+      });
     }
   };
 
@@ -550,10 +605,11 @@ export const WorkingHoursComponent = () => {
       <EditWorkingHoursDialog
         isOpen={isEditDialogOpen}
         onClose={() => setIsEditDialogOpen(false)}
-        onUpdate={handleUpdate}
-        workingHours={editingWorkingHours}
+        workingHour={selectedWorkingHour}
+        onUpdate={handleUpdateWorkingHour}
         clients={clients}
         projects={projects}
+        profiles={profiles}
       />
     </div>
   );

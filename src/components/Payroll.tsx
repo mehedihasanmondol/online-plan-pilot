@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -332,20 +331,11 @@ export const PayrollComponent = () => {
       </div>
 
       {/* Tabs for Payroll Management */}
-      <Tabs defaultValue="quick-generate" className="space-y-4">
+      <Tabs defaultValue="payroll-records" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="quick-generate">Quick Generate Payroll</TabsTrigger>
           <TabsTrigger value="payroll-records">Payroll Records</TabsTrigger>
+          <TabsTrigger value="quick-generate">Quick Generate Payroll</TabsTrigger>
         </TabsList>
-
-        <TabsContent value="quick-generate">
-          <PayrollQuickGenerate
-            profiles={profiles}
-            profilesWithHours={profilesWithHours}
-            workingHours={workingHours}
-            onRefresh={fetchPayrolls}
-          />
-        </TabsContent>
 
         <TabsContent value="payroll-records">
           <PayrollListWithFilters
@@ -354,6 +344,15 @@ export const PayrollComponent = () => {
             onMarkAsPaid={handleMarkAsPaid}
             onApprove={(id) => updatePayrollStatus(id, "approved")}
             loading={loading}
+          />
+        </TabsContent>
+
+        <TabsContent value="quick-generate">
+          <PayrollQuickGenerate
+            profiles={profiles}
+            profilesWithHours={profilesWithHours}
+            workingHours={workingHours}
+            onRefresh={fetchPayrolls}
           />
         </TabsContent>
       </Tabs>

@@ -31,6 +31,65 @@ export const PayrollListWithFilters = ({
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
+  // Date shortcuts
+  const getDateShortcut = (shortcut: string) => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth();
+    
+    switch (shortcut) {
+      case 'last-week':
+        const lastWeek = new Date(now);
+        lastWeek.setDate(now.getDate() - 7);
+        return {
+          start: lastWeek.toISOString().split('T')[0],
+          end: now.toISOString().split('T')[0]
+        };
+      case 'current-week':
+        const startOfWeek = new Date(now);
+        startOfWeek.setDate(now.getDate() - now.getDay());
+        return {
+          start: startOfWeek.toISOString().split('T')[0],
+          end: now.toISOString().split('T')[0]
+        };
+      case 'last-month':
+        const lastMonth = new Date(currentYear, currentMonth - 1, 1);
+        const lastMonthEnd = new Date(currentYear, currentMonth, 0);
+        return {
+          start: lastMonth.toISOString().split('T')[0],
+          end: lastMonthEnd.toISOString().split('T')[0]
+        };
+      case 'march':
+        return {
+          start: new Date(currentYear, 2, 1).toISOString().split('T')[0],
+          end: new Date(currentYear, 2, 31).toISOString().split('T')[0]
+        };
+      case 'april':
+        return {
+          start: new Date(currentYear, 3, 1).toISOString().split('T')[0],
+          end: new Date(currentYear, 3, 30).toISOString().split('T')[0]
+        };
+      case 'may':
+        return {
+          start: new Date(currentYear, 4, 1).toISOString().split('T')[0],
+          end: new Date(currentYear, 4, 31).toISOString().split('T')[0]
+        };
+      case 'this-year':
+        return {
+          start: new Date(currentYear, 0, 1).toISOString().split('T')[0],
+          end: new Date(currentYear, 11, 31).toISOString().split('T')[0]
+        };
+      default:
+        return { start: "", end: "" };
+    }
+  };
+
+  const handleDateShortcut = (shortcut: string) => {
+    const { start, end } = getDateShortcut(shortcut);
+    setStartDate(start);
+    setEndDate(end);
+  };
+
   // Filter and search payrolls
   const filteredPayrolls = useMemo(() => {
     return payrolls.filter((payroll) => {
@@ -64,6 +123,69 @@ export const PayrollListWithFilters = ({
     <Card>
       <CardHeader>
         <CardTitle>Payroll Records</CardTitle>
+        
+        {/* Date Shortcuts */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('last-week')}
+          >
+            Last Week
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('current-week')}
+          >
+            Current Week
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('last-month')}
+          >
+            Last Month
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('march')}
+          >
+            March
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('april')}
+          >
+            April
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('may')}
+          >
+            May
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('this-year')}
+          >
+            This Year
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+          >
+            Clear Dates
+          </Button>
+        </div>
         
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
