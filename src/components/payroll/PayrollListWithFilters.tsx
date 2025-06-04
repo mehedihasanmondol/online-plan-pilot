@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Calendar, Eye, DollarSign, Filter } from "lucide-react";
+import { Search, Calendar, Eye, DollarSign } from "lucide-react";
 import type { Payroll } from "@/types/database";
 
 interface PayrollListWithFiltersProps {
@@ -28,11 +28,10 @@ export const PayrollListWithFilters = ({
   const [statusFilter, setStatusFilter] = useState("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [dateShortcut, setDateShortcut] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
-  // Date shortcuts logic
+  // Date shortcuts
   const getDateShortcut = (shortcut: string) => {
     const now = new Date();
     const currentYear = now.getFullYear();
@@ -60,16 +59,6 @@ export const PayrollListWithFilters = ({
           start: lastMonth.toISOString().split('T')[0],
           end: lastMonthEnd.toISOString().split('T')[0]
         };
-      case 'january':
-        return {
-          start: new Date(currentYear, 0, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 0, 31).toISOString().split('T')[0]
-        };
-      case 'february':
-        return {
-          start: new Date(currentYear, 1, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 1, 28).toISOString().split('T')[0]
-        };
       case 'march':
         return {
           start: new Date(currentYear, 2, 1).toISOString().split('T')[0],
@@ -85,41 +74,6 @@ export const PayrollListWithFilters = ({
           start: new Date(currentYear, 4, 1).toISOString().split('T')[0],
           end: new Date(currentYear, 4, 31).toISOString().split('T')[0]
         };
-      case 'june':
-        return {
-          start: new Date(currentYear, 5, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 5, 30).toISOString().split('T')[0]
-        };
-      case 'july':
-        return {
-          start: new Date(currentYear, 6, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 6, 31).toISOString().split('T')[0]
-        };
-      case 'august':
-        return {
-          start: new Date(currentYear, 7, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 7, 31).toISOString().split('T')[0]
-        };
-      case 'september':
-        return {
-          start: new Date(currentYear, 8, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 8, 30).toISOString().split('T')[0]
-        };
-      case 'october':
-        return {
-          start: new Date(currentYear, 9, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 9, 31).toISOString().split('T')[0]
-        };
-      case 'november':
-        return {
-          start: new Date(currentYear, 10, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 10, 30).toISOString().split('T')[0]
-        };
-      case 'december':
-        return {
-          start: new Date(currentYear, 11, 1).toISOString().split('T')[0],
-          end: new Date(currentYear, 11, 31).toISOString().split('T')[0]
-        };
       case 'this-year':
         return {
           start: new Date(currentYear, 0, 1).toISOString().split('T')[0],
@@ -131,15 +85,9 @@ export const PayrollListWithFilters = ({
   };
 
   const handleDateShortcut = (shortcut: string) => {
-    setDateShortcut(shortcut);
-    if (shortcut === "all") {
-      setStartDate("");
-      setEndDate("");
-    } else {
-      const { start, end } = getDateShortcut(shortcut);
-      setStartDate(start);
-      setEndDate(end);
-    }
+    const { start, end } = getDateShortcut(shortcut);
+    setStartDate(start);
+    setEndDate(end);
   };
 
   // Filter and search payrolls
@@ -176,103 +124,118 @@ export const PayrollListWithFilters = ({
       <CardHeader>
         <CardTitle>Payroll Records</CardTitle>
         
-        {/* Enhanced Date Filter Section */}
-        <div className="space-y-4">
-          {/* First Row: Date Shortcuts, Date Pickers, and Filter Button */}
-          <div className="flex flex-wrap items-end gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <Label htmlFor="date-shortcut">Quick Date Filter</Label>
-              <Select value={dateShortcut} onValueChange={handleDateShortcut}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="last-week">Last Week</SelectItem>
-                  <SelectItem value="current-week">Current Week</SelectItem>
-                  <SelectItem value="last-month">Last Month</SelectItem>
-                  <SelectItem value="january">January</SelectItem>
-                  <SelectItem value="february">February</SelectItem>
-                  <SelectItem value="march">March</SelectItem>
-                  <SelectItem value="april">April</SelectItem>
-                  <SelectItem value="may">May</SelectItem>
-                  <SelectItem value="june">June</SelectItem>
-                  <SelectItem value="july">July</SelectItem>
-                  <SelectItem value="august">August</SelectItem>
-                  <SelectItem value="september">September</SelectItem>
-                  <SelectItem value="october">October</SelectItem>
-                  <SelectItem value="november">November</SelectItem>
-                  <SelectItem value="december">December</SelectItem>
-                  <SelectItem value="this-year">This Year</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="start-date">Start Date</Label>
+        {/* Date Shortcuts */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('last-week')}
+          >
+            Last Week
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('current-week')}
+          >
+            Current Week
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('last-month')}
+          >
+            Last Month
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('march')}
+          >
+            March
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('april')}
+          >
+            April
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('may')}
+          >
+            May
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleDateShortcut('this-year')}
+          >
+            This Year
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => {
+              setStartDate("");
+              setEndDate("");
+            }}
+          >
+            Clear Dates
+          </Button>
+        </div>
+        
+        {/* Filters */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <Label htmlFor="search">Search Employee</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => {
-                  setStartDate(e.target.value);
-                  setDateShortcut("custom");
-                }}
+                id="search"
+                placeholder="Search by name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
               />
             </div>
-
-            <div>
-              <Label htmlFor="end-date">End Date</Label>
-              <Input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => {
-                  setEndDate(e.target.value);
-                  setDateShortcut("custom");
-                }}
-              />
-            </div>
-
-            <Button 
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <Filter className="h-4 w-4" />
-              Filter
-            </Button>
           </div>
 
-          {/* Second Row: Search and Status Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="search">Search Employee</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  id="search"
-                  placeholder="Search by name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
+          <div>
+            <Label htmlFor="status">Status</Label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <Label htmlFor="status">Status</Label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="approved">Approved</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="start-date">Start Date</Label>
+            <Input
+              id="start-date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="end-date">End Date</Label>
+            <Input
+              id="end-date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+            />
           </div>
         </div>
       </CardHeader>
