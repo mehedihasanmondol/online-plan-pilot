@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { Dashboard } from "@/components/Dashboard";
@@ -5,12 +6,13 @@ import { PersonalDashboard } from "@/components/PersonalDashboard";
 import { ProfileManagement } from "@/components/ProfileManagement";
 import { ClientManagement } from "@/components/ClientManagement";
 import { ProjectManagement } from "@/components/ProjectManagement";
-import { WorkingHours } from "@/components/WorkingHours";
-import { Roster } from "@/components/Roster";
+import { WorkingHoursComponent } from "@/components/WorkingHours";
+import { RosterComponent } from "@/components/Roster";
 import { PayrollComponent } from "@/components/Payroll";
 import { Notifications } from "@/components/Notifications";
 import { Reports } from "@/components/Reports";
 import { BankBalance } from "@/components/BankBalance";
+import { SalaryManagement } from "@/components/SalaryManagement";
 import { RolePermissionsManager } from "@/components/RolePermissionsManager";
 import { UserMenu } from "@/components/UserMenu";
 import { RoleDashboardRouter } from "@/components/RoleDashboardRouter";
@@ -34,13 +36,15 @@ const Index = () => {
       case "projects":
         return <ProjectManagement />;
       case "working-hours":
-        return <WorkingHours />;
+        return <WorkingHoursComponent />;
       case "roster":
-        return <Roster />;
+        return <RosterComponent />;
       case "roster-report":
         return <RosterReport />;
       case "payroll":
         return <PayrollComponent />;
+      case "salary":
+        return <SalaryManagement />;
       case "notifications":
         return <Notifications />;
       case "reports":

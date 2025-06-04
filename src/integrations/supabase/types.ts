@@ -71,7 +71,7 @@ export type Database = {
           id: string
           profile_id: string | null
           project_id: string | null
-          type: string
+          type: Database["public"]["Enums"]["bank_transaction_type"]
           updated_at: string
         }
         Insert: {
@@ -85,7 +85,7 @@ export type Database = {
           id?: string
           profile_id?: string | null
           project_id?: string | null
-          type: string
+          type: Database["public"]["Enums"]["bank_transaction_type"]
           updated_at?: string
         }
         Update: {
@@ -99,7 +99,7 @@ export type Database = {
           id?: string
           profile_id?: string | null
           project_id?: string | null
-          type?: string
+          type?: Database["public"]["Enums"]["bank_transaction_type"]
           updated_at?: string
         }
         Relationships: [
@@ -133,6 +133,115 @@ export type Database = {
           },
         ]
       }
+      bulk_payroll: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          name: string
+          pay_period_end: string
+          pay_period_start: string
+          processed_records: number | null
+          status: Database["public"]["Enums"]["bulk_payroll_status"] | null
+          total_amount: number | null
+          total_records: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          name: string
+          pay_period_end: string
+          pay_period_start: string
+          processed_records?: number | null
+          status?: Database["public"]["Enums"]["bulk_payroll_status"] | null
+          total_amount?: number | null
+          total_records?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          name?: string
+          pay_period_end?: string
+          pay_period_start?: string
+          processed_records?: number | null
+          status?: Database["public"]["Enums"]["bulk_payroll_status"] | null
+          total_amount?: number | null
+          total_records?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_payroll_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bulk_payroll_items: {
+        Row: {
+          bulk_payroll_id: string
+          created_at: string
+          error_message: string | null
+          id: string
+          payroll_id: string | null
+          profile_id: string
+          status: Database["public"]["Enums"]["bulk_payroll_item_status"] | null
+        }
+        Insert: {
+          bulk_payroll_id: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payroll_id?: string | null
+          profile_id: string
+          status?:
+            | Database["public"]["Enums"]["bulk_payroll_item_status"]
+            | null
+        }
+        Update: {
+          bulk_payroll_id?: string
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payroll_id?: string | null
+          profile_id?: string
+          status?:
+            | Database["public"]["Enums"]["bulk_payroll_item_status"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bulk_payroll_items_bulk_payroll_id_fkey"
+            columns: ["bulk_payroll_id"]
+            isOneToOne: false
+            referencedRelation: "bulk_payroll"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_payroll_items_payroll_id_fkey"
+            columns: ["payroll_id"]
+            isOneToOne: false
+            referencedRelation: "payroll"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bulk_payroll_items_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clients: {
         Row: {
           company: string
@@ -141,7 +250,7 @@ export type Database = {
           id: string
           name: string
           phone: string | null
-          status: string
+          status: Database["public"]["Enums"]["client_status"] | null
           updated_at: string
         }
         Insert: {
@@ -151,7 +260,7 @@ export type Database = {
           id?: string
           name: string
           phone?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["client_status"] | null
           updated_at?: string
         }
         Update: {
@@ -161,7 +270,7 @@ export type Database = {
           id?: string
           name?: string
           phone?: string | null
-          status?: string
+          status?: Database["public"]["Enums"]["client_status"] | null
           updated_at?: string
         }
         Relationships: []
@@ -237,14 +346,16 @@ export type Database = {
       notifications: {
         Row: {
           action_data: Json | null
-          action_type: string | null
+          action_type:
+            | Database["public"]["Enums"]["notification_action_type"]
+            | null
           actioned_at: string | null
           created_at: string
           id: string
           is_actioned: boolean
           is_read: boolean
           message: string
-          priority: string
+          priority: Database["public"]["Enums"]["notification_priority"] | null
           read_at: string | null
           recipient_profile_id: string
           related_id: string | null
@@ -254,14 +365,16 @@ export type Database = {
         }
         Insert: {
           action_data?: Json | null
-          action_type?: string | null
+          action_type?:
+            | Database["public"]["Enums"]["notification_action_type"]
+            | null
           actioned_at?: string | null
           created_at?: string
           id?: string
           is_actioned?: boolean
           is_read?: boolean
           message: string
-          priority?: string
+          priority?: Database["public"]["Enums"]["notification_priority"] | null
           read_at?: string | null
           recipient_profile_id: string
           related_id?: string | null
@@ -271,14 +384,16 @@ export type Database = {
         }
         Update: {
           action_data?: Json | null
-          action_type?: string | null
+          action_type?:
+            | Database["public"]["Enums"]["notification_action_type"]
+            | null
           actioned_at?: string | null
           created_at?: string
           id?: string
           is_actioned?: boolean
           is_read?: boolean
           message?: string
-          priority?: string
+          priority?: Database["public"]["Enums"]["notification_priority"] | null
           read_at?: string | null
           recipient_profile_id?: string
           related_id?: string | null
@@ -305,6 +420,7 @@ export type Database = {
       }
       payroll: {
         Row: {
+          bank_account_id: string | null
           created_at: string
           deductions: number
           gross_pay: number
@@ -314,11 +430,12 @@ export type Database = {
           pay_period_end: string
           pay_period_start: string
           profile_id: string
-          status: string
+          status: Database["public"]["Enums"]["payroll_status"] | null
           total_hours: number
           updated_at: string
         }
         Insert: {
+          bank_account_id?: string | null
           created_at?: string
           deductions?: number
           gross_pay?: number
@@ -328,11 +445,12 @@ export type Database = {
           pay_period_end: string
           pay_period_start: string
           profile_id: string
-          status?: string
+          status?: Database["public"]["Enums"]["payroll_status"] | null
           total_hours?: number
           updated_at?: string
         }
         Update: {
+          bank_account_id?: string | null
           created_at?: string
           deductions?: number
           gross_pay?: number
@@ -342,11 +460,18 @@ export type Database = {
           pay_period_end?: string
           pay_period_start?: string
           profile_id?: string
-          status?: string
+          status?: Database["public"]["Enums"]["payroll_status"] | null
           total_hours?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "payroll_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "payroll_profile_id_fkey"
             columns: ["profile_id"]
@@ -424,7 +549,7 @@ export type Database = {
           id: string
           name: string
           start_date: string
-          status: string
+          status: Database["public"]["Enums"]["project_status"] | null
           updated_at: string
         }
         Insert: {
@@ -436,7 +561,7 @@ export type Database = {
           id?: string
           name: string
           start_date: string
-          status?: string
+          status?: Database["public"]["Enums"]["project_status"] | null
           updated_at?: string
         }
         Update: {
@@ -448,7 +573,7 @@ export type Database = {
           id?: string
           name?: string
           start_date?: string
-          status?: string
+          status?: Database["public"]["Enums"]["project_status"] | null
           updated_at?: string
         }
         Relationships: [
@@ -532,7 +657,7 @@ export type Database = {
           profile_id: string
           project_id: string
           start_time: string
-          status: string | null
+          status: Database["public"]["Enums"]["roster_status"] | null
           total_hours: number
           updated_at: string | null
         }
@@ -552,7 +677,7 @@ export type Database = {
           profile_id: string
           project_id: string
           start_time: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["roster_status"] | null
           total_hours: number
           updated_at?: string | null
         }
@@ -572,7 +697,7 @@ export type Database = {
           profile_id?: string
           project_id?: string
           start_time?: string
-          status?: string | null
+          status?: Database["public"]["Enums"]["roster_status"] | null
           total_hours?: number
           updated_at?: string | null
         }
@@ -600,6 +725,83 @@ export type Database = {
           },
         ]
       }
+      salary_templates: {
+        Row: {
+          bank_account_id: string | null
+          base_hourly_rate: number | null
+          client_id: string | null
+          created_at: string
+          deduction_percentage: number | null
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          overtime_multiplier: number | null
+          profile_id: string | null
+          project_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          bank_account_id?: string | null
+          base_hourly_rate?: number | null
+          client_id?: string | null
+          created_at?: string
+          deduction_percentage?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          overtime_multiplier?: number | null
+          profile_id?: string | null
+          project_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          bank_account_id?: string | null
+          base_hourly_rate?: number | null
+          client_id?: string | null
+          created_at?: string
+          deduction_percentage?: number | null
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          overtime_multiplier?: number | null
+          profile_id?: string | null
+          project_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salary_templates_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_templates_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_templates_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "salary_templates_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       working_hours: {
         Row: {
           actual_hours: number | null
@@ -618,7 +820,7 @@ export type Database = {
           sign_in_time: string | null
           sign_out_time: string | null
           start_time: string
-          status: string
+          status: Database["public"]["Enums"]["working_hours_status"]
           total_hours: number
           updated_at: string
         }
@@ -639,7 +841,7 @@ export type Database = {
           sign_in_time?: string | null
           sign_out_time?: string | null
           start_time: string
-          status?: string
+          status?: Database["public"]["Enums"]["working_hours_status"]
           total_hours: number
           updated_at?: string
         }
@@ -660,7 +862,7 @@ export type Database = {
           sign_in_time?: string | null
           sign_out_time?: string | null
           start_time?: string
-          status?: string
+          status?: Database["public"]["Enums"]["working_hours_status"]
           total_hours?: number
           updated_at?: string
         }
@@ -747,7 +949,22 @@ export type Database = {
         | "reports_view"
         | "reports_generate"
         | "notifications_view"
+      bank_transaction_type: "deposit" | "withdrawal"
+      bulk_payroll_item_status: "pending" | "processed" | "failed"
+      bulk_payroll_status: "draft" | "processing" | "completed" | "failed"
+      client_status: "active" | "inactive"
       employment_type: "full-time" | "part-time" | "casual"
+      notification_action_type:
+        | "approve"
+        | "confirm"
+        | "grant"
+        | "cancel"
+        | "reject"
+        | "none"
+      notification_priority: "low" | "medium" | "high"
+      payroll_status: "pending" | "approved" | "paid"
+      project_status: "active" | "completed" | "on-hold"
+      roster_status: "pending" | "confirmed" | "cancelled"
       transaction_category:
         | "income"
         | "expense"
@@ -760,12 +977,14 @@ export type Database = {
         | "utilities"
         | "marketing"
         | "other"
+        | "opening_balance"
       user_role:
         | "admin"
         | "employee"
         | "accountant"
         | "operation"
         | "sales_manager"
+      working_hours_status: "pending" | "approved" | "rejected" | "paid"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -903,7 +1122,23 @@ export const Constants = {
         "reports_generate",
         "notifications_view",
       ],
+      bank_transaction_type: ["deposit", "withdrawal"],
+      bulk_payroll_item_status: ["pending", "processed", "failed"],
+      bulk_payroll_status: ["draft", "processing", "completed", "failed"],
+      client_status: ["active", "inactive"],
       employment_type: ["full-time", "part-time", "casual"],
+      notification_action_type: [
+        "approve",
+        "confirm",
+        "grant",
+        "cancel",
+        "reject",
+        "none",
+      ],
+      notification_priority: ["low", "medium", "high"],
+      payroll_status: ["pending", "approved", "paid"],
+      project_status: ["active", "completed", "on-hold"],
+      roster_status: ["pending", "confirmed", "cancelled"],
       transaction_category: [
         "income",
         "expense",
@@ -916,6 +1151,7 @@ export const Constants = {
         "utilities",
         "marketing",
         "other",
+        "opening_balance",
       ],
       user_role: [
         "admin",
@@ -924,6 +1160,7 @@ export const Constants = {
         "operation",
         "sales_manager",
       ],
+      working_hours_status: ["pending", "approved", "rejected", "paid"],
     },
   },
 } as const
