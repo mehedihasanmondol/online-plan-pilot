@@ -1,8 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Plus, DollarSign, Calendar, FileText, Clock, User } from "lucide-react";
+import { Plus, DollarSign, Calendar, FileText, Clock, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Payroll as PayrollType, Profile, WorkingHour, BankAccount } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -335,7 +336,7 @@ export const PayrollComponent = () => {
       <Tabs defaultValue="payroll-records" className="space-y-4">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="payroll-records">Payroll Records</TabsTrigger>
-          <TabsTrigger value="employees-with-hours">Employees with Approved Hours</TabsTrigger>
+          <TabsTrigger value="quick-generator">Quick Payroll Generator</TabsTrigger>
         </TabsList>
 
         <TabsContent value="payroll-records">
@@ -349,47 +350,102 @@ export const PayrollComponent = () => {
           />
         </TabsContent>
 
-        <TabsContent value="employees-with-hours">
+        <TabsContent value="quick-generator">
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  Employees with Approved Hours
+                  <Zap className="h-5 w-5 text-blue-600" />
+                  Quick Payroll Generator
                 </CardTitle>
-                <PayrollQuickGenerate
-                  profiles={profiles}
-                  profilesWithHours={profilesWithHours}
-                  workingHours={workingHours}
-                  onRefresh={fetchPayrolls}
-                />
+                <div className="text-sm text-gray-600">
+                  {profilesWithHours.length} employees with approved hours available
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {profilesWithHours.length === 0 ? (
-                  <p className="text-gray-500 text-center py-4">
-                    No employees have approved working hours available
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="h-4 w-4 text-blue-600" />
+                    <span className="font-medium text-blue-900">Quick Generate Feature</span>
+                  </div>
+                  <p className="text-sm text-blue-700">
+                    Select an employee below to automatically generate their payroll with pre-filled data based on their approved working hours.
                   </p>
+                </div>
+
+                {profilesWithHours.length === 0 ? (
+                  <div className="text-center py-12">
+                    <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Approved Hours Available</h3>
+                    <p className="text-gray-600">
+                      No employees have approved working hours available for payroll generation.
+                    </p>
+                  </div>
                 ) : (
-                  profilesWithHours.map((profile) => {
-                    const profileHours = workingHours.filter(wh => wh.profile_id === profile.id);
-                    const totalHours = profileHours.reduce((sum, wh) => sum + wh.total_hours, 0);
-                    const avgRate = profileHours.length > 0 
-                      ? profileHours.reduce((sum, wh) => sum + (wh.hourly_rate || 0), 0) / profileHours.length
-                      : 0;
-                    
-                    return (
-                      <div key={profile.id} className="flex items-center justify-between p-3 border rounded-lg">
-                        <div>
-                          <div className="font-medium">{profile.full_name}</div>
-                          <div className="text-sm text-gray-600">
-                            {profile.role} - {totalHours.toFixed(1)}h available at avg ${avgRate.toFixed(2)}/hr
+                  <div className="grid gap-4">
+                    {profilesWithHours.map((profile) => {
+                      const profileHours = workingHours.filter(wh => wh.profile_id === profile.id);
+                      const totalHours = profileHours.reduce((sum, wh) => sum + wh.total_hours, 0);
+                      const avgRate = profileHours.length > 0 
+                        ? profileHours.reduce((sum, wh) => sum + (wh.hourly_rate || 0), 0) / profileHours.length
+                        : profile.hourly_rate || 0;
+                      const estimatedPay = totalHours * avgRate;
+                      
+                      // Get date range of available hours
+                      const dates = profileHours.map(wh => new Date(wh.date)).sort((a, b) => a.getTime() - b.getTime());
+                      const startDate = dates[0]?.toLocaleDateString();
+                      const endDate = dates[dates.length - 1]?.toLocaleDateString();
+                      
+                      return (
+                        <div key={profile.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <div className="h-10 w-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                  <span className="font-medium text-gray-700">
+                                    {profile.full_name.split(' ').map(n => n[0]).join('')}
+                                  </span>
+                                </div>
+                                <div>
+                                  <h3 className="font-medium text-gray-900">{profile.full_name}</h3>
+                                  <p className="text-sm text-gray-600">{profile.role}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                                <div>
+                                  <span className="text-gray-600">Available Hours:</span>
+                                  <div className="font-medium">{totalHours.toFixed(1)}h</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">Avg Rate:</span>
+                                  <div className="font-medium">${avgRate.toFixed(2)}/hr</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">Period:</span>
+                                  <div className="font-medium">{startDate} - {endDate}</div>
+                                </div>
+                                <div>
+                                  <span className="text-gray-600">Estimated Pay:</span>
+                                  <div className="font-medium text-green-600">${estimatedPay.toFixed(2)}</div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            <PayrollQuickGenerate
+                              profiles={profiles}
+                              profilesWithHours={profilesWithHours}
+                              workingHours={workingHours}
+                              onRefresh={fetchPayrolls}
+                              preSelectedProfile={profile}
+                            />
                           </div>
                         </div>
-                      </div>
-                    );
-                  })
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             </CardContent>

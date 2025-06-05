@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Clock, ChevronDown, ChevronUp, Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile, WorkingHour } from "@/types/database";
 import { useToast } from "@/hooks/use-toast";
@@ -16,13 +16,15 @@ interface PayrollQuickGenerateProps {
   profilesWithHours: Profile[];
   workingHours: WorkingHour[];
   onRefresh: () => void;
+  preSelectedProfile?: Profile;
 }
 
 export const PayrollQuickGenerate = ({ 
   profiles, 
   profilesWithHours, 
   workingHours, 
-  onRefresh 
+  onRefresh,
+  preSelectedProfile 
 }: PayrollQuickGenerateProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isWorkingHoursPreviewOpen, setIsWorkingHoursPreviewOpen] = useState(false);
@@ -42,6 +44,41 @@ export const PayrollQuickGenerate = ({
   });
 
   const [previewWorkingHours, setPreviewWorkingHours] = useState<WorkingHour[]>([]);
+
+  // Auto-fill form when preSelectedProfile is provided
+  useEffect(() => {
+    if (preSelectedProfile && isDialogOpen) {
+      const profileWorkingHours = workingHours.filter(wh => wh.profile_id === preSelectedProfile.id);
+      
+      if (profileWorkingHours.length > 0) {
+        // Get date range
+        const dates = profileWorkingHours.map(wh => new Date(wh.date)).sort((a, b) => a.getTime() - b.getTime());
+        const startDate = dates[0]?.toISOString().split('T')[0];
+        const endDate = dates[dates.length - 1]?.toISOString().split('T')[0];
+        
+        // Calculate totals
+        const totalHours = profileWorkingHours.reduce((sum, wh) => sum + wh.total_hours, 0);
+        const avgHourlyRate = profileWorkingHours.length > 0 
+          ? profileWorkingHours.reduce((sum, wh) => sum + (wh.hourly_rate || 0), 0) / profileWorkingHours.length
+          : preSelectedProfile.hourly_rate || 0;
+
+        setFormData({
+          profile_id: preSelectedProfile.id,
+          pay_period_start: startDate || "",
+          pay_period_end: endDate || "",
+          total_hours: totalHours,
+          hourly_rate: avgHourlyRate,
+          gross_pay: 0,
+          deductions: 0,
+          net_pay: 0,
+          status: "pending"
+        });
+        
+        setPreviewWorkingHours(profileWorkingHours);
+        setIsWorkingHoursPreviewOpen(true);
+      }
+    }
+  }, [preSelectedProfile, isDialogOpen, workingHours]);
 
   const calculatePayroll = (hours: number, rate: number, deductions: number) => {
     const gross = hours * rate;
@@ -94,7 +131,7 @@ export const PayrollQuickGenerate = ({
   };
 
   useEffect(() => {
-    if (formData.profile_id && formData.pay_period_start && formData.pay_period_end) {
+    if (formData.profile_id && formData.pay_period_start && formData.pay_period_end && !preSelectedProfile) {
       const profileWorkingHours = workingHours.filter(wh => 
         wh.profile_id === formData.profile_id &&
         wh.date >= formData.pay_period_start &&
@@ -114,29 +151,52 @@ export const PayrollQuickGenerate = ({
       
       setPreviewWorkingHours(profileWorkingHours);
     }
-  }, [formData.profile_id, formData.pay_period_start, formData.pay_period_end, workingHours]);
+  }, [formData.profile_id, formData.pay_period_start, formData.pay_period_end, workingHours, preSelectedProfile]);
+
+  const buttonText = preSelectedProfile ? "Quick Generate" : "Create Payroll";
+  const buttonIcon = preSelectedProfile ? <Zap className="h-4 w-4" /> : <Plus className="h-4 w-4" />;
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Create Payroll
+        <Button className="flex items-center gap-2" variant={preSelectedProfile ? "default" : "outline"}>
+          {buttonIcon}
+          {buttonText}
         </Button>
       </DialogTrigger>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Create Payroll Record</DialogTitle>
+          <DialogTitle>
+            {preSelectedProfile ? `Quick Generate Payroll - ${preSelectedProfile.full_name}` : "Create Payroll Record"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <ProfileSelector
-            profiles={profiles}
-            selectedProfileId={formData.profile_id}
-            onProfileSelect={(profileId) => setFormData({ ...formData, profile_id: profileId })}
-            label="Select Profile"
-            placeholder="Choose an employee"
-            showRoleFilter={true}
-          />
+          {!preSelectedProfile && (
+            <ProfileSelector
+              profiles={profiles}
+              selectedProfileId={formData.profile_id}
+              onProfileSelect={(profileId) => setFormData({ ...formData, profile_id: profileId })}
+              label="Select Profile"
+              placeholder="Choose an employee"
+              showRoleFilter={true}
+            />
+          )}
+
+          {preSelectedProfile && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 bg-blue-600 rounded-full flex items-center justify-center">
+                  <span className="font-medium text-white">
+                    {preSelectedProfile.full_name.split(' ').map(n => n[0]).join('')}
+                  </span>
+                </div>
+                <div>
+                  <h3 className="font-medium text-blue-900">{preSelectedProfile.full_name}</h3>
+                  <p className="text-sm text-blue-700">{preSelectedProfile.role}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -253,7 +313,7 @@ export const PayrollQuickGenerate = ({
           )}
 
           <Button type="submit" disabled={loading} className="w-full">
-            {loading ? "Creating..." : "Create Payroll"}
+            {loading ? "Creating..." : buttonText}
           </Button>
         </form>
       </DialogContent>
