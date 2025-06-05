@@ -37,7 +37,7 @@ export const WorkingHoursComponent = () => {
     sign_out_time: "",
     hourly_rate: 0,
     notes: "",
-    status: "pending"
+    status: "pending" as const
   });
 
   useEffect(() => {
@@ -164,7 +164,7 @@ export const WorkingHoursComponent = () => {
       
       const { error } = await supabase
         .from('working_hours')
-        .insert([{
+        .insert({
           ...formData,
           total_hours: totalHours,
           actual_hours: actualHours || null,
@@ -172,7 +172,7 @@ export const WorkingHoursComponent = () => {
           payable_amount: payableAmount,
           sign_in_time: formData.sign_in_time || null,
           sign_out_time: formData.sign_out_time || null
-        }]);
+        });
 
       if (error) throw error;
       toast({ title: "Success", description: "Working hours logged successfully" });
@@ -189,7 +189,7 @@ export const WorkingHoursComponent = () => {
         sign_out_time: "",
         hourly_rate: 0,
         notes: "",
-        status: "pending"
+        status: "pending" as const
       });
       fetchWorkingHours();
     } catch (error) {

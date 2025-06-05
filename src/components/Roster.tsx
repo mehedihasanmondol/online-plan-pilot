@@ -51,7 +51,7 @@ export const RosterComponent = () => {
     start_time: "",
     end_time: "",
     notes: "",
-    status: "pending",
+    status: "pending" as const,
     name: generateDefaultRosterName(),
     expected_profiles: 1,
     per_hour_rate: 0
@@ -158,6 +158,55 @@ export const RosterComponent = () => {
     return Math.max(0, diffHours);
   };
 
+  const createWorkingHoursForProfiles = async (rosterId: string, profileIds: string[], rosterData: any) => {
+    try {
+      const workingHoursToCreate = [];
+      
+      // For each profile, create working hours for each date in the range
+      for (const profileId of profileIds) {
+        const profile = profiles.find(p => p.id === profileId);
+        const profileHourlyRate = profile?.hourly_rate || 0;
+        const usedRate = rosterData.per_hour_rate > 0 ? rosterData.per_hour_rate : profileHourlyRate;
+        
+        // Calculate date range
+        const startDate = new Date(rosterData.date);
+        const endDate = rosterData.end_date ? new Date(rosterData.end_date) : startDate;
+        
+        let currentDate = new Date(startDate);
+        while (currentDate <= endDate) {
+          workingHoursToCreate.push({
+            profile_id: profileId,
+            client_id: rosterData.client_id,
+            project_id: rosterData.project_id,
+            roster_id: rosterId,
+            date: currentDate.toISOString().split('T')[0],
+            start_time: rosterData.start_time,
+            end_time: rosterData.end_time,
+            total_hours: rosterData.total_hours,
+            hourly_rate: usedRate,
+            payable_amount: rosterData.total_hours * usedRate,
+            status: 'pending' as const
+          });
+          
+          currentDate.setDate(currentDate.getDate() + 1);
+        }
+      }
+      
+      // Insert all working hours records
+      if (workingHoursToCreate.length > 0) {
+        const { error } = await supabase
+          .from('working_hours')
+          .insert(workingHoursToCreate);
+          
+        if (error) throw error;
+        console.log(`Created ${workingHoursToCreate.length} working hours records for ${profileIds.length} profiles`);
+      }
+    } catch (error) {
+      console.error('Error creating working hours:', error);
+      throw error;
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -184,7 +233,7 @@ export const RosterComponent = () => {
       // Create roster with first profile as primary
       const { data: roster, error: rosterError } = await supabase
         .from('rosters')
-        .insert([{
+        .insert({
           profile_id: formData.profile_ids[0], // Use first selected profile as primary
           client_id: formData.client_id,
           project_id: formData.project_id,
@@ -198,7 +247,7 @@ export const RosterComponent = () => {
           name: finalName,
           expected_profiles: formData.expected_profiles,
           per_hour_rate: formData.per_hour_rate
-        }])
+        })
         .select()
         .single();
 
@@ -216,7 +265,22 @@ export const RosterComponent = () => {
 
       if (profilesError) throw profilesError;
 
-      toast({ title: "Success", description: "Roster created successfully" });
+      // Create working hours for all selected profiles
+      await createWorkingHoursForProfiles(roster.id, formData.profile_ids, {
+        client_id: formData.client_id,
+        project_id: formData.project_id,
+        date: formData.date,
+        end_date: formData.end_date,
+        start_time: formData.start_time,
+        end_time: formData.end_time,
+        total_hours: totalHours,
+        per_hour_rate: formData.per_hour_rate
+      });
+
+      toast({ 
+        title: "Success", 
+        description: `Roster created successfully with working hours for ${formData.profile_ids.length} profile(s)` 
+      });
       
       setIsDialogOpen(false);
       setFormData({
@@ -228,7 +292,7 @@ export const RosterComponent = () => {
         start_time: "",
         end_time: "",
         notes: "",
-        status: "pending",
+        status: "pending" as const,
         name: generateDefaultRosterName(),
         expected_profiles: 1,
         per_hour_rate: 0
