@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Clock, Calendar, DollarSign, Plus, Edit, Trash2, CheckCircle, XCircle, Eye } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import type { WorkingHour, Profile, Client, Project } from '@/types/database';
-import { EditWorkingHoursDialog } from './EditWorkingHoursDialog';
-import { WorkingHoursActions } from './working-hours/WorkingHoursActions';
+import { useState, useEffect } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Plus, Search, Clock, CheckCircle, XCircle, DollarSign, Timer, Edit } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { WorkingHour, Profile, Client, Project } from "@/types/database";
+import { useToast } from "@/hooks/use-toast";
+import { ProfileSelector } from "@/components/common/ProfileSelector";
+import { EditWorkingHoursDialog } from "@/components/EditWorkingHoursDialog";
 
-const WorkingHours = () => {
+export const WorkingHoursComponent = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [workingHours, setWorkingHours] = useState<WorkingHour[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -39,8 +39,6 @@ const WorkingHours = () => {
     notes: "",
     status: "pending"
   });
-
-  const [bulkEditData, setBulkEditData] = useState<WorkingHour[]>([]);
 
   useEffect(() => {
     fetchWorkingHours();
@@ -238,34 +236,6 @@ const WorkingHours = () => {
     (wh.profiles?.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (wh.projects?.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleBulkUpdate = async () => {
-    setLoading(true);
-    try {
-      const updates = bulkEditData.map(data => ({
-        ...data,
-        status: data.status as 'pending' | 'approved' | 'rejected' | 'paid'
-      }));
-
-      const { error } = await supabase
-        .from('working_hours')
-        .upsert(updates);
-
-      if (error) throw error;
-      toast({ title: "Success", description: "Working hours updated successfully" });
-      setBulkEditData([]);
-      fetchWorkingHours();
-    } catch (error) {
-      console.error('Error updating working hours:', error);
-      toast({
-        title: "Error",
-        description: "Failed to update working hours",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading && workingHours.length === 0) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
@@ -628,14 +598,6 @@ const WorkingHours = () => {
         clients={clients}
         projects={projects}
       />
-
-      <WorkingHoursActions
-        bulkEditData={bulkEditData}
-        setBulkEditData={setBulkEditData}
-        handleBulkUpdate={handleBulkUpdate}
-      />
     </div>
   );
 };
-
-export default WorkingHours;
