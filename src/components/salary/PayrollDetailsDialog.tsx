@@ -79,7 +79,7 @@ export const PayrollDetailsDialog = ({
         .from('working_hours')
         .select(`
           *,
-          clients!working_hours_client_id_fkey (id, name, company, email, phone, status, created_at, updated_at),
+          clients!working_hours_client_id_fkey (id, name, company),
           projects!working_hours_project_id_fkey (id, name)
         `)
         .eq('profile_id', payroll.profile_id)
@@ -215,7 +215,7 @@ This is an automatically generated payslip.
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-2">
@@ -244,13 +244,13 @@ This is an automatically generated payslip.
           </div>
         </DialogHeader>
 
-        <div className="space-y-4 print:space-y-2" id="payroll-content">
+        <div className="space-y-6 print:space-y-4" id="payroll-content">
           {/* PAGE 1 - SUMMARY */}
           <div className="print-page">
             {/* Header */}
-            <div className="text-center border-b-2 border-gray-800 pb-2 print:pb-1">
-              <h1 className="text-2xl font-bold text-gray-800 print:text-lg">PAYSLIP</h1>
-              <div className="mt-1 grid grid-cols-1 md:grid-cols-3 gap-1 text-xs text-gray-600">
+            <div className="text-center border-b-2 border-gray-800 pb-4 print:pb-2">
+              <h1 className="text-3xl font-bold text-gray-800 print:text-2xl">PAYSLIP</h1>
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600">
                 <div>Pay Period: {new Date(payroll.pay_period_start).toLocaleDateString()} - {new Date(payroll.pay_period_end).toLocaleDateString()}</div>
                 <div>Pay Date: {new Date().toLocaleDateString()}</div>
                 <div>Payslip ID: {payroll.id.slice(0, 8)}</div>
@@ -258,39 +258,39 @@ This is an automatically generated payslip.
             </div>
 
             {/* Employee Information */}
-            <Card className="print:shadow-none print:border mt-3">
-              <CardHeader className="pb-2 print:pb-1">
-                <CardTitle className="flex items-center gap-2 text-base print:text-sm">
-                  <User className="h-4 w-4" />
+            <Card className="print:shadow-none print:border mt-6">
+              <CardHeader className="print:pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg print:text-base">
+                  <User className="h-5 w-5" />
                   Employee Information
                 </CardTitle>
               </CardHeader>
-              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-2 print:gap-1 text-sm print:text-xs">
+              <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
                 <div>
-                  <div className="text-xs text-gray-600">Full Name</div>
+                  <div className="text-sm text-gray-600">Full Name</div>
                   <div className="font-medium">{profile?.full_name}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-600">Email</div>
+                  <div className="text-sm text-gray-600">Email</div>
                   <div className="font-medium">{profile?.email}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-600">Role</div>
+                  <div className="text-sm text-gray-600">Role</div>
                   <div className="font-medium capitalize">{profile?.role}</div>
                 </div>
                 <div>
-                  <div className="text-xs text-gray-600">Employment Type</div>
+                  <div className="text-sm text-gray-600">Employment Type</div>
                   <div className="font-medium capitalize">{profile?.employment_type}</div>
                 </div>
                 {profile?.phone && (
                   <div>
-                    <div className="text-xs text-gray-600">Phone</div>
+                    <div className="text-sm text-gray-600">Phone</div>
                     <div className="font-medium">{profile.phone}</div>
                   </div>
                 )}
                 {profile?.full_address && (
                   <div className="md:col-span-2">
-                    <div className="text-xs text-gray-600">Address</div>
+                    <div className="text-sm text-gray-600">Address</div>
                     <div className="font-medium">{profile.full_address}</div>
                   </div>
                 )}
@@ -298,36 +298,36 @@ This is an automatically generated payslip.
             </Card>
 
             {/* Payment Summary */}
-            <Card className="print:shadow-none print:border mt-3">
-              <CardHeader className="pb-2 print:pb-1">
-                <CardTitle className="flex items-center gap-2 text-base print:text-sm">
-                  <DollarSign className="h-4 w-4" />
+            <Card className="print:shadow-none print:border mt-6">
+              <CardHeader className="print:pb-2">
+                <CardTitle className="flex items-center gap-2 text-lg print:text-base">
+                  <DollarSign className="h-5 w-5" />
                   Payment Summary
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-2 print:gap-1 mb-3">
-                  <div className="text-center p-2 bg-blue-50 rounded print:bg-gray-50">
-                    <div className="text-xs text-gray-600">Total Hours</div>
-                    <div className="text-lg font-bold text-blue-600 print:text-sm">{payroll.total_hours}</div>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:gap-2 mb-4">
+                  <div className="text-center p-3 bg-blue-50 rounded print:bg-gray-50">
+                    <div className="text-sm text-gray-600">Total Hours</div>
+                    <div className="text-xl font-bold text-blue-600">{payroll.total_hours}</div>
                   </div>
-                  <div className="text-center p-2 bg-green-50 rounded print:bg-gray-50">
-                    <div className="text-xs text-gray-600">Hourly Rate</div>
-                    <div className="text-lg font-bold text-green-600 print:text-sm">${payroll.hourly_rate.toFixed(2)}</div>
+                  <div className="text-center p-3 bg-green-50 rounded print:bg-gray-50">
+                    <div className="text-sm text-gray-600">Hourly Rate</div>
+                    <div className="text-xl font-bold text-green-600">${payroll.hourly_rate.toFixed(2)}</div>
                   </div>
-                  <div className="text-center p-2 bg-purple-50 rounded print:bg-gray-50">
-                    <div className="text-xs text-gray-600">Gross Pay</div>
-                    <div className="text-lg font-bold text-purple-600 print:text-sm">${payroll.gross_pay.toFixed(2)}</div>
+                  <div className="text-center p-3 bg-purple-50 rounded print:bg-gray-50">
+                    <div className="text-sm text-gray-600">Gross Pay</div>
+                    <div className="text-xl font-bold text-purple-600">${payroll.gross_pay.toFixed(2)}</div>
                   </div>
-                  <div className="text-center p-2 bg-orange-50 rounded print:bg-gray-50">
-                    <div className="text-xs text-gray-600">Net Pay</div>
-                    <div className="text-lg font-bold text-orange-600 print:text-sm">${payroll.net_pay.toFixed(2)}</div>
+                  <div className="text-center p-3 bg-orange-50 rounded print:bg-gray-50">
+                    <div className="text-sm text-gray-600">Net Pay</div>
+                    <div className="text-xl font-bold text-orange-600">${payroll.net_pay.toFixed(2)}</div>
                   </div>
                 </div>
                 
-                <Separator className="my-2" />
+                <Separator className="my-4" />
                 
-                <div className="space-y-1 text-xs">
+                <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-600">Gross Pay</span>
                     <span className="font-medium">${payroll.gross_pay.toFixed(2)}</span>
@@ -337,7 +337,7 @@ This is an automatically generated payslip.
                     <span className="font-medium">-${payroll.deductions.toFixed(2)}</span>
                   </div>
                   <Separator />
-                  <div className="flex justify-between text-sm font-bold">
+                  <div className="flex justify-between text-lg font-bold">
                     <span>Net Pay</span>
                     <span className="text-green-600">${payroll.net_pay.toFixed(2)}</span>
                   </div>
@@ -345,118 +345,83 @@ This is an automatically generated payslip.
               </CardContent>
             </Card>
 
-            {/* Bank Accounts - Compact Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-3">
-              {/* Employee Bank Account */}
-              {profileBankAccount && (
-                <Card className="print:shadow-none print:border">
-                  <CardHeader className="pb-2 print:pb-1">
-                    <CardTitle className="flex items-center gap-2 text-base print:text-sm">
-                      <Building className="h-4 w-4" />
-                      Employee Bank Account
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-xs">
-                    <div>
-                      <span className="text-gray-600">Bank:</span> {profileBankAccount.bank_name}
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Account:</span> {profileBankAccount.account_number}
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Holder:</span> {profileBankAccount.account_holder_name}
-                    </div>
-                    {profileBankAccount.bsb_code && (
-                      <div>
-                        <span className="text-gray-600">BSB:</span> {profileBankAccount.bsb_code}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              {/* Payment Bank Account */}
-              {paymentBankAccount && (
-                <Card className="print:shadow-none print:border">
-                  <CardHeader className="pb-2 print:pb-1">
-                    <CardTitle className="flex items-center gap-2 text-base print:text-sm">
-                      <CreditCard className="h-4 w-4" />
-                      Payment Bank Account
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-1 text-xs">
-                    <div>
-                      <span className="text-gray-600">Bank:</span> {paymentBankAccount.bank_name}
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Account:</span> {paymentBankAccount.account_number}
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Holder:</span> {paymentBankAccount.account_holder_name}
-                    </div>
-                    {paymentBankAccount.bsb_code && (
-                      <div>
-                        <span className="text-gray-600">BSB:</span> {paymentBankAccount.bsb_code}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-
-            {/* Working Hours Summary */}
-            {workingHours.length > 0 && (
-              <Card className="print:shadow-none print:border mt-3">
-                <CardHeader className="pb-2 print:pb-1">
-                  <CardTitle className="flex items-center gap-2 text-base print:text-sm">
-                    <Clock className="h-4 w-4" />
-                    Working Hours Summary ({workingHours.length} entries)
+            {/* Employee Bank Account Information */}
+            {profileBankAccount && (
+              <Card className="print:shadow-none print:border mt-6">
+                <CardHeader className="print:pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg print:text-base">
+                    <Building className="h-5 w-5" />
+                    Employee Bank Account Details
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <div className="max-h-40 overflow-y-auto print:max-h-none">
-                    <div className="space-y-1">
-                      {workingHours.map((wh, index) => (
-                        <div key={wh.id} className={`text-xs p-2 rounded ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} print:bg-white print:border-b print:border-gray-200`}>
-                          <div className="flex justify-between items-center">
-                            <div className="flex gap-4">
-                              <span className="font-medium">{new Date(wh.date).toLocaleDateString()}</span>
-                              <span>{wh.clients?.company || 'N/A'}</span>
-                              <span>{wh.projects?.name || 'N/A'}</span>
-                            </div>
-                            <div className="flex gap-2 text-right">
-                              <span>{wh.total_hours}h</span>
-                              <span className="font-medium">${(wh.total_hours * (wh.hourly_rate || 0)).toFixed(2)}</span>
-                            </div>
-                          </div>
-                          {wh.notes && (
-                            <div className="text-gray-600 mt-1">{wh.notes}</div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                    
-                    <div className="mt-2 pt-2 border-t border-gray-300 text-xs font-bold">
-                      <div className="flex justify-between">
-                        <span>TOTAL:</span>
-                        <div className="flex gap-2">
-                          <span>{workingHours.reduce((sum, wh) => sum + wh.total_hours, 0)}h</span>
-                          <span>${workingHours.reduce((sum, wh) => sum + (wh.total_hours * (wh.hourly_rate || 0)), 0).toFixed(2)}</span>
-                        </div>
-                      </div>
-                    </div>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
+                  <div>
+                    <div className="text-sm text-gray-600">Bank Name</div>
+                    <div className="font-medium">{profileBankAccount.bank_name}</div>
                   </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Account Number</div>
+                    <div className="font-medium">{profileBankAccount.account_number}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Account Holder</div>
+                    <div className="font-medium">{profileBankAccount.account_holder_name}</div>
+                  </div>
+                  {profileBankAccount.bsb_code && (
+                    <div>
+                      <div className="text-sm text-gray-600">BSB Code</div>
+                      <div className="font-medium">{profileBankAccount.bsb_code}</div>
+                    </div>
+                  )}
+                  {profileBankAccount.swift_code && (
+                    <div className="md:col-span-2">
+                      <div className="text-sm text-gray-600">SWIFT Code</div>
+                      <div className="font-medium">{profileBankAccount.swift_code}</div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Bank Account Information */}
+            {paymentBankAccount && (
+              <Card className="print:shadow-none print:border mt-6">
+                <CardHeader className="print:pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg print:text-base">
+                    <CreditCard className="h-5 w-5" />
+                    Payment Bank Account Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4 print:gap-2">
+                  <div>
+                    <div className="text-sm text-gray-600">Paid From Bank</div>
+                    <div className="font-medium">{paymentBankAccount.bank_name}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Account Number</div>
+                    <div className="font-medium">{paymentBankAccount.account_number}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-600">Account Holder</div>
+                    <div className="font-medium">{paymentBankAccount.account_holder_name}</div>
+                  </div>
+                  {paymentBankAccount.bsb_code && (
+                    <div>
+                      <div className="text-sm text-gray-600">BSB Code</div>
+                      <div className="font-medium">{paymentBankAccount.bsb_code}</div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}
 
             {/* Status and Signature */}
-            <Card className="print:shadow-none print:border mt-3">
-              <CardContent className="pt-4 print:pt-2">
-                <div className="flex justify-between items-center mb-4">
+            <Card className="print:shadow-none print:border mt-6">
+              <CardContent className="pt-6 print:pt-4">
+                <div className="flex justify-between items-center mb-6">
                   <div>
-                    <div className="text-xs text-gray-600">Payment Status</div>
-                    <div className={`text-sm font-bold capitalize ${
+                    <div className="text-sm text-gray-600">Payment Status</div>
+                    <div className={`text-lg font-bold capitalize ${
                       payroll.status === 'paid' 
                         ? 'text-green-600' 
                         : payroll.status === 'approved'
@@ -467,35 +432,113 @@ This is an automatically generated payslip.
                     </div>
                   </div>
                   <div className="text-right">
-                    <div className="text-xs text-gray-600">Generated On</div>
-                    <div className="text-sm font-medium">{new Date(payroll.created_at).toLocaleDateString()}</div>
+                    <div className="text-sm text-gray-600">Generated On</div>
+                    <div className="font-medium">{new Date(payroll.created_at).toLocaleDateString()}</div>
                   </div>
                 </div>
 
                 {/* Signature Section */}
-                <Separator className="mb-3" />
-                <div className="space-y-2">
-                  <div className="text-center text-xs font-medium text-gray-700">
+                <Separator className="mb-6" />
+                <div className="space-y-4">
+                  <div className="text-center text-sm font-medium text-gray-700">
                     Employee Acknowledgment
                   </div>
-                  <div className="flex justify-between items-end pt-4">
+                  <div className="flex justify-between items-end pt-8">
                     <div className="text-center">
-                      <div className="border-b border-gray-400 w-40 mb-1"></div>
+                      <div className="border-b border-gray-400 w-48 mb-2"></div>
                       <div className="text-xs text-gray-600">Employee Signature</div>
                     </div>
                     <div className="text-center">
-                      <div className="border-b border-gray-400 w-24 mb-1"></div>
+                      <div className="border-b border-gray-400 w-32 mb-2"></div>
                       <div className="text-xs text-gray-600">Date</div>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          {/* PAGE BREAK */}
+          <div className="print-page-break"></div>
+
+          {/* PAGE 2 - WORKING HOURS BREAKDOWN */}
+          <div className="print-page">
+            {/* Working Hours Header */}
+            <div className="text-center border-b-2 border-gray-800 pb-4 print:pb-2">
+              <h2 className="text-2xl font-bold text-gray-800 print:text-xl">WORKING HOURS BREAKDOWN</h2>
+              <div className="mt-2 text-sm text-gray-600">
+                {profile?.full_name} - Pay Period: {new Date(payroll.pay_period_start).toLocaleDateString()} to {new Date(payroll.pay_period_end).toLocaleDateString()}
+              </div>
+            </div>
+
+            {/* Working Hours Details */}
+            {workingHours.length > 0 && (
+              <Card className="print:shadow-none print:border mt-6">
+                <CardHeader className="print:pb-2">
+                  <CardTitle className="flex items-center gap-2 text-lg print:text-base">
+                    <Clock className="h-5 w-5" />
+                    Working Hours Details ({workingHours.length} entries)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr className="border-b-2 border-gray-300">
+                          <th className="text-left py-3 px-2 font-semibold text-gray-700 border-r">Date</th>
+                          <th className="text-left py-3 px-2 font-semibold text-gray-700 border-r">Client</th>
+                          <th className="text-left py-3 px-2 font-semibold text-gray-700 border-r">Project</th>
+                          <th className="text-right py-3 px-2 font-semibold text-gray-700 border-r">Hours</th>
+                          <th className="text-right py-3 px-2 font-semibold text-gray-700 border-r">Rate</th>
+                          <th className="text-right py-3 px-2 font-semibold text-gray-700">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {workingHours.map((wh, index) => (
+                          <tr key={wh.id} className={`border-b ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} print:bg-white`}>
+                            <td className="py-2 px-2 border-r">{new Date(wh.date).toLocaleDateString()}</td>
+                            <td className="py-2 px-2 border-r">{wh.clients?.company || 'N/A'}</td>
+                            <td className="py-2 px-2 border-r">{wh.projects?.name || 'N/A'}</td>
+                            <td className="py-2 px-2 text-right border-r">{wh.total_hours}h</td>
+                            <td className="py-2 px-2 text-right border-r">${(wh.hourly_rate || 0).toFixed(2)}</td>
+                            <td className="py-2 px-2 text-right font-medium">${(wh.total_hours * (wh.hourly_rate || 0)).toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-400 font-bold bg-gray-100 print:bg-gray-100">
+                          <td colSpan={3} className="py-3 px-2 text-right font-semibold">TOTALS:</td>
+                          <td className="py-3 px-2 text-right font-bold border-r">{workingHours.reduce((sum, wh) => sum + wh.total_hours, 0)}h</td>
+                          <td className="py-3 px-2 text-right border-r">-</td>
+                          <td className="py-3 px-2 text-right font-bold">${workingHours.reduce((sum, wh) => sum + (wh.total_hours * (wh.hourly_rate || 0)), 0).toFixed(2)}</td>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+
+                  {/* Notes Section */}
+                  {workingHours.some(wh => wh.notes) && (
+                    <div className="mt-6">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3">Notes:</h4>
+                      <div className="space-y-2 text-xs">
+                        {workingHours.filter(wh => wh.notes).map((wh) => (
+                          <div key={wh.id} className="flex gap-2">
+                            <span className="font-medium">{new Date(wh.date).toLocaleDateString()}:</span>
+                            <span>{wh.notes}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Footer */}
-            <div className="mt-4 text-center text-xs text-gray-500 border-t pt-2">
+            <div className="mt-8 text-center text-xs text-gray-500 border-t pt-4">
               <p>This is a computer-generated payslip. Please verify all details and contact HR for any discrepancies.</p>
               <p className="mt-1">Employee copy - retain for your records</p>
+              <p className="mt-2">Page 2 of 2</p>
             </div>
           </div>
         </div>
@@ -504,8 +547,7 @@ This is an automatically generated payslip.
           @media print {
             body { 
               margin: 0; 
-              font-size: 10px;
-              line-height: 1.2;
+              font-size: 12px;
             }
             
             .dialog-content {
@@ -513,7 +555,7 @@ This is an automatically generated payslip.
               border: none !important;
               max-width: none !important;
               margin: 0 !important;
-              padding: 0.25rem !important;
+              padding: 0.5rem !important;
             }
             
             button, .print\\:hidden {
@@ -529,45 +571,36 @@ This is an automatically generated payslip.
               page-break-inside: avoid;
             }
             
-            .text-2xl { font-size: 1.2rem !important; }
-            .text-lg { font-size: 0.95rem !important; }
-            .text-base { font-size: 0.85rem !important; }
-            .text-sm { font-size: 0.8rem !important; }
-            .text-xs { font-size: 0.7rem !important; }
+            .print-page-break {
+              page-break-before: always;
+              height: 0;
+              margin: 0;
+              padding: 0;
+            }
             
-            .space-y-4 > * + * { margin-top: 0.5rem !important; }
-            .space-y-3 > * + * { margin-top: 0.4rem !important; }
-            .space-y-2 > * + * { margin-top: 0.3rem !important; }
-            .space-y-1 > * + * { margin-top: 0.2rem !important; }
+            .text-3xl { font-size: 1.5rem !important; }
+            .text-2xl { font-size: 1.25rem !important; }
+            .text-xl { font-size: 1.1rem !important; }
+            .text-lg { font-size: 1rem !important; }
+            
+            .space-y-6 > * + * { margin-top: 1rem !important; }
+            .space-y-4 > * + * { margin-top: 0.75rem !important; }
             
             .bg-blue-50, .bg-green-50, .bg-purple-50, .bg-orange-50 {
-              background-color: #f5f5f5 !important;
+              background-color: #f9f9f9 !important;
             }
             
-            .p-4 { padding: 0.5rem !important; }
-            .p-3 { padding: 0.4rem !important; }
-            .p-2 { padding: 0.3rem !important; }
-            .py-2 { padding-top: 0.3rem !important; padding-bottom: 0.3rem !important; }
-            .px-2 { padding-left: 0.3rem !important; padding-right: 0.3rem !important; }
-            .pt-4 { padding-top: 0.5rem !important; }
-            .pb-2 { padding-bottom: 0.3rem !important; }
-            .mt-3 { margin-top: 0.4rem !important; }
-            .mt-4 { margin-top: 0.5rem !important; }
-            .mb-3 { margin-bottom: 0.4rem !important; }
-            .mb-4 { margin-bottom: 0.5rem !important; }
+            table {
+              border-collapse: collapse !important;
+            }
             
-            .gap-4 { gap: 0.5rem !important; }
-            .gap-3 { gap: 0.4rem !important; }
-            .gap-2 { gap: 0.3rem !important; }
-            .gap-1 { gap: 0.2rem !important; }
+            table td, table th {
+              border: 1px solid #ddd !important;
+            }
             
             @page {
-              margin: 0.5cm;
+              margin: 1cm;
               size: A4;
-            }
-            
-            .max-h-40 {
-              max-height: none !important;
             }
           }
         `}</style>
