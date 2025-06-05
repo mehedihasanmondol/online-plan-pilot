@@ -121,7 +121,7 @@ export const PayrollGenerationWizard = ({ profiles, workingHours, onRefresh }: P
       console.log('Profiles with unpaid hours:', eligibleProfiles.length);
       setFilteredProfiles(eligibleProfiles);
 
-      // Preserve selected profiles if they're still eligible
+      // Clear selected profiles if they're no longer eligible
       setSelectedProfileIds(prev => 
         prev.filter(id => eligibleProfiles.some(p => p.id === id))
       );
@@ -305,8 +305,6 @@ export const PayrollGenerationWizard = ({ profiles, workingHours, onRefresh }: P
       setPayrollPreview([]);
       setOverlappingPayrolls([]);
       onRefresh();
-      // Refresh the filtered data to update eligible profiles
-      await reloadFilteredData();
     } catch (error: any) {
       console.error('Error generating payroll:', error);
       toast({
