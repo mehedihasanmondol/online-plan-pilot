@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Calendar } from "lucide-react";
+import { Search, Calendar, Plus } from "lucide-react";
 import { PayrollActions } from "./PayrollActions";
 import type { Payroll as PayrollType, Profile, WorkingHour } from "@/types/database";
+import { PayrollCreateDialog } from "./PayrollCreateDialog";
 
 interface PayrollListWithFiltersProps {
   payrolls: PayrollType[];
@@ -177,19 +178,6 @@ export const PayrollListWithFilters = ({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Payroll Records</CardTitle>
-          {profiles.length > 0 ? (
-            <PayrollCreateDialog
-              profiles={profiles}
-              profilesWithHours={profilesWithHours}
-              workingHours={workingHours}
-              onRefresh={onRefresh}
-            />
-          ) : (
-            <Button onClick={onCreatePayroll} className="flex items-center gap-2">
-              <Plus className="h-4 w-4" />
-              Create Payroll
-            </Button>
-          )}
         </div>
         
         {/* Filters */}
