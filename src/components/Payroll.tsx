@@ -11,6 +11,7 @@ import { BankSelectionDialog } from "@/components/payroll/BankSelectionDialog";
 import { PayrollListWithFilters } from "@/components/payroll/PayrollListWithFilters";
 import { PayrollQuickGenerate } from "@/components/payroll/PayrollQuickGenerate";
 import { PayrollEditDialog } from "@/components/payroll/PayrollEditDialog";
+import { PayrollCreateDialog } from "@/components/payroll/PayrollCreateDialog";
 
 export const PayrollComponent = () => {
   const [payrolls, setPayrolls] = useState<PayrollType[]>([]);
@@ -311,6 +312,16 @@ export const PayrollComponent = () => {
             <p className="text-gray-600">Manage employee payroll and payments</p>
           </div>
         </div>
+        
+        {/* Create Payroll Button */}
+        {profiles.length > 0 && (
+          <PayrollCreateDialog
+            profiles={profiles}
+            profilesWithHours={profilesWithHours}
+            workingHours={workingHours}
+            onRefresh={fetchPayrolls}
+          />
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -381,9 +392,9 @@ export const PayrollComponent = () => {
             onEditPayroll={handleEditPayroll}
             onDeletePayroll={handleDeletePayroll}
             loading={loading}
-            profiles={profiles}
-            profilesWithHours={profilesWithHours}
-            workingHours={workingHours}
+            profiles={[]}
+            profilesWithHours={[]}
+            workingHours={[]}
             onRefresh={fetchPayrolls}
           />
         </TabsContent>
