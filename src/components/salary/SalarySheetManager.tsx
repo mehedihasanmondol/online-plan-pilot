@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Printer, Download, Eye, Calendar, DollarSign, Trash2, CreditCard, Check, Edit } from "lucide-react";
+import { FileText, Printer, Download, Eye, Calendar, DollarSign, Trash2, CreditCard, Check, Edit, Search } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { Payroll, Profile, BankAccount } from "@/types/database";
@@ -35,12 +35,33 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
   const [showPayrollDetails, setShowPayrollDetails] = useState(false);
   const [showPayrollEdit, setShowPayrollEdit] = useState(false);
   const [bankBalance, setBankBalance] = useState<number>(0);
+  
+  // Date filter states
+  const [dateShortcut, setDateShortcut] = useState("current-week");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  
   const { toast } = useToast();
 
   // Update local payrolls when prop changes
   useEffect(() => {
     setPayrolls(initialPayrolls);
   }, [initialPayrolls]);
+
+  // Set default dates to current week
+  useEffect(() => {
+    const today = new Date();
+    const currentDay = today.getDay();
+    const mondayDate = new Date(today);
+    mondayDate.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+    
+    const sundayDate = new Date(mondayDate);
+    sundayDate.setDate(mondayDate.getDate() + 6);
+    
+    setStartDate(mondayDate.toISOString().split('T')[0]);
+    setEndDate(sundayDate.toISOString().split('T')[0]);
+  }, []);
 
   useEffect(() => {
     groupPayrollsByPeriod();
@@ -53,6 +74,88 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
       fetchBankBalance();
     }
   }, [selectedBankAccount]);
+
+  const handleDateShortcut = (shortcut: string) => {
+    setDateShortcut(shortcut);
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    
+    let start: Date, end: Date;
+    
+    switch (shortcut) {
+      case "last-week":
+        const lastWeekStart = new Date(today);
+        lastWeekStart.setDate(today.getDate() - today.getDay() - 6);
+        const lastWeekEnd = new Date(lastWeekStart);
+        lastWeekEnd.setDate(lastWeekStart.getDate() + 6);
+        start = lastWeekStart;
+        end = lastWeekEnd;
+        break;
+        
+      case "current-week":
+        const currentDay = today.getDay();
+        const mondayDate = new Date(today);
+        mondayDate.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+        const sundayDate = new Date(mondayDate);
+        sundayDate.setDate(mondayDate.getDate() + 6);
+        start = mondayDate;
+        end = sundayDate;
+        break;
+        
+      case "last-month":
+        start = new Date(currentYear, currentMonth - 1, 1);
+        end = new Date(currentYear, currentMonth, 0);
+        break;
+        
+      case "this-year":
+        start = new Date(currentYear, 0, 1);
+        end = new Date(currentYear, 11, 31);
+        break;
+        
+      default:
+        const monthNames = [
+          "january", "february", "march", "april", "may", "june",
+          "july", "august", "september", "october", "november", "december"
+        ];
+        const monthIndex = monthNames.indexOf(shortcut.toLowerCase());
+        if (monthIndex !== -1) {
+          start = new Date(currentYear, monthIndex, 1);
+          end = new Date(currentYear, monthIndex + 1, 0);
+        } else {
+          return;
+        }
+    }
+    
+    setStartDate(start.toISOString().split('T')[0]);
+    setEndDate(end.toISOString().split('T')[0]);
+  };
+
+  const generateShortcutOptions = () => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const monthNames = [
+      "January", "February", "March", "April", "May", "June",
+      "July", "August", "September", "October", "November", "December"
+    ];
+    
+    const options = [
+      { value: "last-week", label: "Last Week" },
+      { value: "current-week", label: "Current Week" },
+      { value: "last-month", label: "Last Month" },
+    ];
+    
+    for (let i = currentMonth; i >= 0; i--) {
+      options.push({
+        value: monthNames[i].toLowerCase(),
+        label: monthNames[i]
+      });
+    }
+    
+    options.push({ value: "this-year", label: "This Year" });
+    
+    return options;
+  };
 
   const fetchBankAccounts = async () => {
     try {
@@ -138,25 +241,72 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
     }
   };
 
-  const filteredPayrolls = selectedPeriod ? groupedPayrolls[selectedPeriod] || [] : [];
-  
-  const searchFilteredPayrolls = filteredPayrolls.filter(payroll =>
-    payroll.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Apply filters to payrolls
+  const getFilteredPayrolls = () => {
+    let filtered = payrolls;
 
-  const totalGrossPay = searchFilteredPayrolls.reduce((sum, p) => sum + p.gross_pay, 0);
-  const totalDeductions = searchFilteredPayrolls.reduce((sum, p) => sum + p.deductions, 0);
-  const totalNetPay = searchFilteredPayrolls.reduce((sum, p) => sum + p.net_pay, 0);
-  const totalHours = searchFilteredPayrolls.reduce((sum, p) => sum + p.total_hours, 0);
+    // Apply date filter
+    if (startDate && endDate) {
+      filtered = filtered.filter(payroll => {
+        const payrollStart = new Date(payroll.pay_period_start);
+        const payrollEnd = new Date(payroll.pay_period_end);
+        const filterStart = new Date(startDate);
+        const filterEnd = new Date(endDate);
+        
+        return (payrollStart >= filterStart && payrollStart <= filterEnd) ||
+               (payrollEnd >= filterStart && payrollEnd <= filterEnd) ||
+               (payrollStart <= filterStart && payrollEnd >= filterEnd);
+      });
+    }
+
+    // Apply status filter
+    if (statusFilter !== "all") {
+      filtered = filtered.filter(payroll => payroll.status === statusFilter);
+    }
+
+    // Apply search filter
+    if (searchTerm) {
+      filtered = filtered.filter(payroll =>
+        payroll.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredPayrolls = getFilteredPayrolls();
+
+  // Group filtered payrolls by period
+  const groupFilteredPayrollsByPeriod = () => {
+    const grouped: Record<string, Payroll[]> = {};
+    
+    filteredPayrolls.forEach(payroll => {
+      const periodKey = `${payroll.pay_period_start} - ${payroll.pay_period_end}`;
+      if (!grouped[periodKey]) {
+        grouped[periodKey] = [];
+      }
+      grouped[periodKey].push(payroll);
+    });
+
+    return grouped;
+  };
+
+  const filteredGroupedPayrolls = groupFilteredPayrollsByPeriod();
+  const currentPeriodPayrolls = selectedPeriod ? (filteredGroupedPayrolls[selectedPeriod] || []) : [];
+
+  const totalGrossPay = currentPeriodPayrolls.reduce((sum, p) => sum + p.gross_pay, 0);
+  const totalDeductions = currentPeriodPayrolls.reduce((sum, p) => sum + p.deductions, 0);
+  const totalNetPay = currentPeriodPayrolls.reduce((sum, p) => sum + p.net_pay, 0);
+  const totalHours = currentPeriodPayrolls.reduce((sum, p) => sum + p.total_hours, 0);
 
   // Get payrolls that can be approved (pending status)
-  const approvablePayrolls = searchFilteredPayrolls.filter(p => p.status === 'pending');
+  const approvablePayrolls = currentPeriodPayrolls.filter(p => p.status === 'pending');
   const selectedApprovablePayrolls = selectedPayrolls.filter(id => 
     approvablePayrolls.some(p => p.id === id)
   );
 
   // Get payrolls that can be paid (approved status)
-  const payablePayrolls = searchFilteredPayrolls.filter(p => p.status === 'approved');
+  const payablePayrolls = currentPeriodPayrolls.filter(p => p.status === 'approved');
   const selectedPayablePayrolls = selectedPayrolls.filter(id => 
     payablePayrolls.some(p => p.id === id)
   );
@@ -177,7 +327,7 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedPayrolls(searchFilteredPayrolls.map(p => p.id));
+      setSelectedPayrolls(currentPeriodPayrolls.map(p => p.id));
     } else {
       setSelectedPayrolls([]);
     }
@@ -459,6 +609,64 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
           </CardTitle>
         </CardHeader>
         <CardContent>
+          {/* Date and Status Filters */}
+          <div className="flex flex-wrap items-center gap-4 mb-6">
+            <Select value={dateShortcut} onValueChange={handleDateShortcut}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Date shortcut" />
+              </SelectTrigger>
+              <SelectContent>
+                {generateShortcutOptions().map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-gray-500" />
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-40"
+                placeholder="Start Date"
+              />
+              <span className="text-gray-500">to</span>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-40"
+                placeholder="End Date"
+              />
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search employees..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-32">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Period Selection */}
           <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1">
               <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
@@ -466,36 +674,28 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
                   <SelectValue placeholder="Select pay period" />
                 </SelectTrigger>
                 <SelectContent>
-                  {Object.keys(groupedPayrolls).sort().reverse().map((period) => (
+                  {Object.keys(filteredGroupedPayrolls).sort().reverse().map((period) => (
                     <SelectItem key={period} value={period}>
-                      {period} ({groupedPayrolls[period].length} employees)
+                      {period} ({filteredGroupedPayrolls[period].length} employees)
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-            
-            <div className="flex-1">
-              <Input
-                placeholder="Search employees..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
 
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => handlePrintSheet(searchFilteredPayrolls)}
-                disabled={searchFilteredPayrolls.length === 0}
+                onClick={() => handlePrintSheet(currentPeriodPayrolls)}
+                disabled={currentPeriodPayrolls.length === 0}
               >
                 <Printer className="h-4 w-4 mr-1" />
                 Print
               </Button>
               <Button 
                 variant="outline" 
-                onClick={() => handleExportCSV(searchFilteredPayrolls)}
-                disabled={searchFilteredPayrolls.length === 0}
+                onClick={() => handleExportCSV(currentPeriodPayrolls)}
+                disabled={currentPeriodPayrolls.length === 0}
               >
                 <Download className="h-4 w-4 mr-1" />
                 Export
@@ -637,7 +837,7 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
                     <tr className="border-b border-gray-200">
                       <th className="text-left py-3 px-4 font-medium text-gray-600">
                         <Checkbox
-                          checked={selectedPayrolls.length === searchFilteredPayrolls.length && searchFilteredPayrolls.length > 0}
+                          checked={selectedPayrolls.length === currentPeriodPayrolls.length && currentPeriodPayrolls.length > 0}
                           onCheckedChange={handleSelectAll}
                         />
                       </th>
@@ -652,7 +852,7 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
                     </tr>
                   </thead>
                   <tbody>
-                    {searchFilteredPayrolls.map((payroll) => (
+                    {currentPeriodPayrolls.map((payroll) => (
                       <tr key={payroll.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <Checkbox
