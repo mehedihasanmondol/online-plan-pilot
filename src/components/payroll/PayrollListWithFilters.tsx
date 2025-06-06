@@ -4,10 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Search, Calendar, Plus } from "lucide-react";
+import { Search, Calendar } from "lucide-react";
 import { PayrollActions } from "./PayrollActions";
 import type { Payroll as PayrollType, Profile, WorkingHour } from "@/types/database";
-import { PayrollCreateDialog } from "./PayrollCreateDialog";
 
 interface PayrollListWithFiltersProps {
   payrolls: PayrollType[];
@@ -214,16 +213,6 @@ export const PayrollListWithFilters = ({
             />
           </div>
           
-          <div className="flex items-center gap-2">
-            <Search className="h-4 w-4 text-gray-500" />
-            <Input
-              placeholder="Search employees..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64"
-            />
-          </div>
-          
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="Status" />
@@ -235,6 +224,16 @@ export const PayrollListWithFilters = ({
               <SelectItem value="paid">Paid</SelectItem>
             </SelectContent>
           </Select>
+          
+          <div className="flex items-center gap-2">
+            <Search className="h-4 w-4 text-gray-500" />
+            <Input
+              placeholder="Search employees..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-64"
+            />
+          </div>
         </div>
       </CardHeader>
       

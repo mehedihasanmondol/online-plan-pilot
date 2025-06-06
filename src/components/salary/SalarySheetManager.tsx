@@ -643,16 +643,6 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
               />
             </div>
             
-            <div className="flex items-center gap-2">
-              <Search className="h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search employees..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-64"
-              />
-            </div>
-            
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Status" />
@@ -664,6 +654,16 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
                 <SelectItem value="paid">Paid</SelectItem>
               </SelectContent>
             </Select>
+            
+            <div className="flex items-center gap-2">
+              <Search className="h-4 w-4 text-gray-500" />
+              <Input
+                placeholder="Search employees..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-64"
+              />
+            </div>
           </div>
 
           {/* Period Selection */}

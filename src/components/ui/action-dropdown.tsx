@@ -28,12 +28,12 @@ export const ActionDropdown = ({ items }: ActionDropdownProps) => {
           <MoreHorizontal className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
+      <DropdownMenuContent align="end" className="bg-white border shadow-lg z-50">
         {items.map((item, index) => (
           <DropdownMenuItem
             key={index}
             onClick={item.onClick}
-            className={item.destructive ? "text-red-600" : ""}
+            className={`flex items-center gap-2 ${item.destructive ? "text-red-600" : ""}`}
           >
             {item.icon}
             {item.label}
