@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { FileText, Printer, Download, Eye, Calendar, DollarSign, Trash2, CreditCard, Check } from "lucide-react";
+import { FileText, Printer, Download, Eye, Calendar, DollarSign, Trash2, CreditCard, Check, Edit } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { supabase } from "@/integrations/supabase/client";
 import { Payroll, Profile, BankAccount } from "@/types/database";
@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { SalarySheetPrintView } from "./SalarySheetPrintView";
 import { ActionDropdown } from "@/components/ui/action-dropdown";
 import { PayrollDetailsDialog } from "./PayrollDetailsDialog";
+import { PayrollEditDialog } from "@/components/payroll/PayrollEditDialog";
 
 interface SalarySheetManagerProps {
   payrolls: Payroll[];
@@ -30,7 +31,9 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
   const [selectedPayrolls, setSelectedPayrolls] = useState<string[]>([]);
   const [selectedPayrollForView, setSelectedPayrollForView] = useState<Payroll | null>(null);
+  const [selectedPayrollForEdit, setSelectedPayrollForEdit] = useState<Payroll | null>(null);
   const [showPayrollDetails, setShowPayrollDetails] = useState(false);
+  const [showPayrollEdit, setShowPayrollEdit] = useState(false);
   const [bankBalance, setBankBalance] = useState<number>(0);
   const { toast } = useToast();
 
@@ -436,6 +439,11 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
     setShowPayrollDetails(true);
   };
 
+  const handleEditPayroll = (payroll: Payroll) => {
+    setSelectedPayrollForEdit(payroll);
+    setShowPayrollEdit(true);
+  };
+
   const getSelectedBankName = () => {
     const bank = bankAccounts.find(b => b.id === selectedBankAccount);
     return bank ? `${bank.bank_name} - ${bank.account_number}` : 'Select Bank Account';
@@ -686,10 +694,15 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
                                 <ActionDropdown
                                   items={[
                                     {
+                                      label: "Edit",
+                                      onClick: () => handleEditPayroll(payroll),
+                                      icon: <Edit className="h-4 w-4" />
+                                    },
+                                    {
                                       label: "Delete",
                                       onClick: () => deletePayroll(payroll.id),
                                       icon: <Trash2 className="h-4 w-4" />,
-                                      variant: "destructive"
+                                      destructive: true
                                     },
                                     {
                                       label: "View Details",
@@ -713,10 +726,15 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
                                 <ActionDropdown
                                   items={[
                                     {
+                                      label: "Edit",
+                                      onClick: () => handleEditPayroll(payroll),
+                                      icon: <Edit className="h-4 w-4" />
+                                    },
+                                    {
                                       label: "Delete",
                                       onClick: () => deletePayroll(payroll.id),
                                       icon: <Trash2 className="h-4 w-4" />,
-                                      variant: "destructive"
+                                      destructive: true
                                     },
                                     {
                                       label: "View Details",
@@ -767,6 +785,17 @@ export const SalarySheetManager = ({ payrolls: initialPayrolls, profiles, onRefr
         payroll={selectedPayrollForView}
         isOpen={showPayrollDetails}
         onClose={() => setShowPayrollDetails(false)}
+      />
+
+      {/* Payroll Edit Dialog */}
+      <PayrollEditDialog
+        payroll={selectedPayrollForEdit}
+        isOpen={showPayrollEdit}
+        onClose={() => setShowPayrollEdit(false)}
+        onSuccess={() => {
+          onRefresh();
+          setShowPayrollEdit(false);
+        }}
       />
     </div>
   );
