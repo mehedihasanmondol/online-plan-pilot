@@ -1,31 +1,22 @@
 
 import { ActionDropdown } from "@/components/ui/action-dropdown";
 import { Edit, Trash2, Eye } from "lucide-react";
+import type { Payroll as PayrollType } from "@/types/database";
 
-interface WorkingHour {
-  id: string;
-  status: string;
-}
-
-interface WorkingHoursActionsProps {
-  workingHour: WorkingHour;
-  onEdit: (id: string) => void;
+interface PayrollActionsProps {
+  payroll: PayrollType;
+  onEdit: (payroll: PayrollType) => void;
   onDelete: (id: string) => void;
-  onView: (id: string) => void;
+  onView: (payroll: PayrollType) => void;
 }
 
-export const WorkingHoursActions = ({
-  workingHour,
-  onEdit,
-  onDelete,
-  onView
-}: WorkingHoursActionsProps) => {
-  const canEditDelete = workingHour.status !== 'paid';
+export const PayrollActions = ({ payroll, onEdit, onDelete, onView }: PayrollActionsProps) => {
+  const canEditDelete = payroll.status !== 'paid';
 
   const items = [
     {
       label: "View Details",
-      onClick: () => onView(workingHour.id),
+      onClick: () => onView(payroll),
       icon: <Eye className="h-4 w-4" />
     }
   ];
@@ -34,12 +25,12 @@ export const WorkingHoursActions = ({
     items.unshift(
       {
         label: "Edit",
-        onClick: () => onEdit(workingHour.id),
+        onClick: () => onEdit(payroll),
         icon: <Edit className="h-4 w-4" />
       },
       {
         label: "Delete",
-        onClick: () => onDelete(workingHour.id),
+        onClick: () => onDelete(payroll.id),
         icon: <Trash2 className="h-4 w-4" />,
         destructive: true
       }

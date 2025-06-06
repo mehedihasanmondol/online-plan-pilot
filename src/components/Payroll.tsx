@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +10,7 @@ import { PayrollDetailsDialog } from "@/components/salary/PayrollDetailsDialog";
 import { BankSelectionDialog } from "@/components/payroll/BankSelectionDialog";
 import { PayrollListWithFilters } from "@/components/payroll/PayrollListWithFilters";
 import { PayrollQuickGenerate } from "@/components/payroll/PayrollQuickGenerate";
+import { PayrollEditDialog } from "@/components/payroll/PayrollEditDialog";
 
 export const PayrollComponent = () => {
   const [payrolls, setPayrolls] = useState<PayrollType[]>([]);
@@ -20,7 +20,9 @@ export const PayrollComponent = () => {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPayrollForView, setSelectedPayrollForView] = useState<PayrollType | null>(null);
+  const [selectedPayrollForEdit, setSelectedPayrollForEdit] = useState<PayrollType | null>(null);
   const [showPayrollDetails, setShowPayrollDetails] = useState(false);
+  const [showPayrollEdit, setShowPayrollEdit] = useState(false);
   const [selectedBankAccount, setSelectedBankAccount] = useState<string>("");
   const [showBankSelectionDialog, setShowBankSelectionDialog] = useState(false);
   const [selectedPayrollForPayment, setSelectedPayrollForPayment] = useState<PayrollType | null>(null);
@@ -265,6 +267,36 @@ export const PayrollComponent = () => {
     // We can pass this function to both tabs
   };
 
+  const handleEditPayroll = (payroll: PayrollType) => {
+    setSelectedPayrollForEdit(payroll);
+    setShowPayrollEdit(true);
+  };
+
+  const handleDeletePayroll = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('payroll')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Payroll record deleted successfully"
+      });
+      
+      fetchPayrolls();
+    } catch (error) {
+      console.error('Error deleting payroll:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete payroll record",
+        variant: "destructive"
+      });
+    }
+  };
+
   if (loading && payrolls.length === 0) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
   }
@@ -345,8 +377,14 @@ export const PayrollComponent = () => {
             onViewPayroll={handleViewPayroll}
             onMarkAsPaid={handleMarkAsPaid}
             onApprove={(id) => updatePayrollStatus(id, "approved")}
-            onCreatePayroll={() => {}} // This will open the PayrollQuickGenerate dialog
+            onCreatePayroll={handleCreatePayroll}
+            onEditPayroll={handleEditPayroll}
+            onDeletePayroll={handleDeletePayroll}
             loading={loading}
+            profiles={profiles}
+            profilesWithHours={profilesWithHours}
+            workingHours={workingHours}
+            onRefresh={fetchPayrolls}
           />
         </TabsContent>
 
@@ -458,6 +496,14 @@ export const PayrollComponent = () => {
         payroll={selectedPayrollForView}
         isOpen={showPayrollDetails}
         onClose={() => setShowPayrollDetails(false)}
+      />
+
+      {/* Payroll Edit Dialog */}
+      <PayrollEditDialog
+        payroll={selectedPayrollForEdit}
+        isOpen={showPayrollEdit}
+        onClose={() => setShowPayrollEdit(false)}
+        onSuccess={fetchPayrolls}
       />
 
       {/* Bank Selection Dialog */}

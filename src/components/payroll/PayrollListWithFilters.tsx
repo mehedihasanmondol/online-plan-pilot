@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Search, Calendar, Plus } from "lucide-react";
-import type { Payroll as PayrollType } from "@/types/database";
+import { PayrollActions } from "./PayrollActions";
+import { PayrollCreateDialog } from "./PayrollCreateDialog";
+import type { Payroll as PayrollType, Profile, WorkingHour } from "@/types/database";
 
 interface PayrollListWithFiltersProps {
   payrolls: PayrollType[];
@@ -14,7 +16,13 @@ interface PayrollListWithFiltersProps {
   onMarkAsPaid: (payroll: PayrollType) => void;
   onApprove: (id: string) => void;
   onCreatePayroll: () => void;
+  onEditPayroll?: (payroll: PayrollType) => void;
+  onDeletePayroll?: (id: string) => void;
   loading: boolean;
+  profiles?: Profile[];
+  profilesWithHours?: Profile[];
+  workingHours?: WorkingHour[];
+  onRefresh?: () => void;
 }
 
 export const PayrollListWithFilters = ({ 
@@ -23,7 +31,13 @@ export const PayrollListWithFilters = ({
   onMarkAsPaid, 
   onApprove,
   onCreatePayroll,
-  loading 
+  onEditPayroll,
+  onDeletePayroll,
+  loading,
+  profiles = [],
+  profilesWithHours = [],
+  workingHours = [],
+  onRefresh = () => {}
 }: PayrollListWithFiltersProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -102,6 +116,18 @@ export const PayrollListWithFilters = ({
     setEndDate(end.toISOString().split('T')[0]);
   };
 
+  const handleEditPayroll = (payroll: PayrollType) => {
+    if (onEditPayroll) {
+      onEditPayroll(payroll);
+    }
+  };
+
+  const handleDeletePayroll = (id: string) => {
+    if (onDeletePayroll) {
+      onDeletePayroll(id);
+    }
+  };
+
   const filteredPayrolls = payrolls.filter(payroll => {
     const matchesSearch = payroll.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || payroll.status === statusFilter;
@@ -153,10 +179,19 @@ export const PayrollListWithFilters = ({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Payroll Records</CardTitle>
-          <Button onClick={onCreatePayroll} className="flex items-center gap-2">
-            <Plus className="h-4 w-4" />
-            Create Payroll
-          </Button>
+          {profiles.length > 0 ? (
+            <PayrollCreateDialog
+              profiles={profiles}
+              profilesWithHours={profilesWithHours}
+              workingHours={workingHours}
+              onRefresh={onRefresh}
+            />
+          ) : (
+            <Button onClick={onCreatePayroll} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Create Payroll
+            </Button>
+          )}
         </div>
         
         {/* Filters */}
@@ -260,14 +295,7 @@ export const PayrollListWithFilters = ({
                       </Badge>
                     </td>
                     <td className="py-3 px-4">
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => onViewPayroll(payroll)}
-                        >
-                          View Details
-                        </Button>
+                      <div className="flex gap-2 items-center">
                         {payroll.status === 'pending' && (
                           <Button
                             variant="outline"
@@ -285,6 +313,12 @@ export const PayrollListWithFilters = ({
                             Mark as Paid
                           </Button>
                         )}
+                        <PayrollActions
+                          payroll={payroll}
+                          onEdit={handleEditPayroll}
+                          onDelete={handleDeletePayroll}
+                          onView={onViewPayroll}
+                        />
                       </div>
                     </td>
                   </tr>

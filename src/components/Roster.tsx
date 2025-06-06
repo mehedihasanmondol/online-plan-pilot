@@ -14,6 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import { MultipleProfileSelector } from "@/components/common/MultipleProfileSelector";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EnhancedRosterCalendarView } from "@/components/roster/EnhancedRosterCalendarView";
+import { RosterWeeklyFilter } from "@/components/roster/RosterWeeklyFilter";
+import { RosterActions } from "@/components/roster/RosterActions";
+import { format, startOfWeek, endOfWeek, isWithinInterval, parseISO } from "date-fns";
+import { RosterEditDialog } from "@/components/roster/RosterEditDialog";
+import { RosterViewDialog } from "@/components/roster/RosterViewDialog";
 
 export const RosterComponent = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,7 +28,8 @@ export const RosterComponent = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("calendar"); // Changed default to calendar
+  const [activeTab, setActiveTab] = useState("calendar");
+  const [currentWeek, setCurrentWeek] = useState(new Date());
   const { toast } = useToast();
 
   const generateDefaultRosterName = () => {
@@ -51,11 +57,16 @@ export const RosterComponent = () => {
     start_time: "",
     end_time: "",
     notes: "",
-    status: "pending" as const,
+    status: "pending",
     name: generateDefaultRosterName(),
     expected_profiles: 1,
     per_hour_rate: 0
   });
+
+  const [editingRoster, setEditingRoster] = useState<RosterType | null>(null);
+  const [viewingRoster, setViewingRoster] = useState<RosterType | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchRosters();
@@ -158,55 +169,6 @@ export const RosterComponent = () => {
     return Math.max(0, diffHours);
   };
 
-  const createWorkingHoursForProfiles = async (rosterId: string, profileIds: string[], rosterData: any) => {
-    try {
-      const workingHoursToCreate = [];
-      
-      // For each profile, create working hours for each date in the range
-      for (const profileId of profileIds) {
-        const profile = profiles.find(p => p.id === profileId);
-        const profileHourlyRate = profile?.hourly_rate || 0;
-        const usedRate = rosterData.per_hour_rate > 0 ? rosterData.per_hour_rate : profileHourlyRate;
-        
-        // Calculate date range
-        const startDate = new Date(rosterData.date);
-        const endDate = rosterData.end_date ? new Date(rosterData.end_date) : startDate;
-        
-        let currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-          workingHoursToCreate.push({
-            profile_id: profileId,
-            client_id: rosterData.client_id,
-            project_id: rosterData.project_id,
-            roster_id: rosterId,
-            date: currentDate.toISOString().split('T')[0],
-            start_time: rosterData.start_time,
-            end_time: rosterData.end_time,
-            total_hours: rosterData.total_hours,
-            hourly_rate: usedRate,
-            payable_amount: rosterData.total_hours * usedRate,
-            status: 'pending' as const
-          });
-          
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-      }
-      
-      // Insert all working hours records
-      if (workingHoursToCreate.length > 0) {
-        const { error } = await supabase
-          .from('working_hours')
-          .insert(workingHoursToCreate);
-          
-        if (error) throw error;
-        console.log(`Created ${workingHoursToCreate.length} working hours records for ${profileIds.length} profiles`);
-      }
-    } catch (error) {
-      console.error('Error creating working hours:', error);
-      throw error;
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -243,7 +205,7 @@ export const RosterComponent = () => {
           end_time: formData.end_time,
           total_hours: totalHours,
           notes: formData.notes,
-          status: formData.status,
+          status: formData.status as 'pending' | 'confirmed' | 'cancelled',
           name: finalName,
           expected_profiles: formData.expected_profiles,
           per_hour_rate: formData.per_hour_rate
@@ -265,22 +227,7 @@ export const RosterComponent = () => {
 
       if (profilesError) throw profilesError;
 
-      // Create working hours for all selected profiles
-      await createWorkingHoursForProfiles(roster.id, formData.profile_ids, {
-        client_id: formData.client_id,
-        project_id: formData.project_id,
-        date: formData.date,
-        end_date: formData.end_date,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        total_hours: totalHours,
-        per_hour_rate: formData.per_hour_rate
-      });
-
-      toast({ 
-        title: "Success", 
-        description: `Roster created successfully with working hours for ${formData.profile_ids.length} profile(s)` 
-      });
+      toast({ title: "Success", description: "Roster created successfully" });
       
       setIsDialogOpen(false);
       setFormData({
@@ -292,7 +239,7 @@ export const RosterComponent = () => {
         start_time: "",
         end_time: "",
         notes: "",
-        status: "pending" as const,
+        status: "pending",
         name: generateDefaultRosterName(),
         expected_profiles: 1,
         per_hour_rate: 0
@@ -360,6 +307,22 @@ export const RosterComponent = () => {
     }
   };
 
+  const handleEditRoster = (roster: RosterType) => {
+    setEditingRoster(roster);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleViewRoster = (roster: RosterType) => {
+    setViewingRoster(roster);
+    setIsViewDialogOpen(true);
+  };
+
+  const handleEditSave = () => {
+    fetchRosters();
+    setEditingRoster(null);
+  };
+
+  // Filter rosters based on search term
   const filteredRosters = rosters.filter(roster =>
     (roster.roster_profiles?.some(rp => 
       rp.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -367,6 +330,23 @@ export const RosterComponent = () => {
     (roster.projects?.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (roster.name || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Filter rosters for current week (for list view)
+  const getWeekFilteredRosters = () => {
+    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
+    
+    return filteredRosters.filter(roster => {
+      const rosterStartDate = parseISO(roster.date);
+      const rosterEndDate = roster.end_date ? parseISO(roster.end_date) : rosterStartDate;
+      
+      return isWithinInterval(rosterStartDate, { start: weekStart, end: weekEnd }) ||
+             isWithinInterval(rosterEndDate, { start: weekStart, end: weekEnd }) ||
+             (rosterStartDate <= weekStart && rosterEndDate >= weekEnd);
+    });
+  };
+
+  const weekFilteredRosters = getWeekFilteredRosters();
 
   // Updated calendar view helper function
   const getCalendarRosters = () => {
@@ -620,10 +600,20 @@ export const RosterComponent = () => {
             </TabsList>
             
             <TabsContent value="calendar" className="mt-6">
-              <EnhancedRosterCalendarView rosters={calendarRosters} />
+              <EnhancedRosterCalendarView 
+                rosters={calendarRosters} 
+                onEdit={handleEditRoster}
+                onDelete={deleteRoster}
+                onView={handleViewRoster}
+              />
             </TabsContent>
             
             <TabsContent value="list" className="mt-4">
+              <RosterWeeklyFilter 
+                currentWeek={currentWeek}
+                onWeekChange={setCurrentWeek}
+              />
+              
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -638,7 +628,7 @@ export const RosterComponent = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredRosters.map((roster) => (
+                    {weekFilteredRosters.map((roster) => (
                       <tr key={roster.id} className="border-b border-gray-100 hover:bg-gray-50">
                         <td className="py-3 px-4">
                           <div className="font-medium text-gray-900">{roster.name || 'Unnamed Roster'}</div>
@@ -682,36 +672,12 @@ export const RosterComponent = () => {
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
-                          <div className="flex items-center gap-2">
-                            {roster.status === "pending" && roster.is_editable && (
-                              <>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => updateStatus(roster.id, "confirmed")}
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  Confirm
-                                </Button>
-                                <Button 
-                                  size="sm" 
-                                  variant="outline"
-                                  onClick={() => updateStatus(roster.id, "cancelled")}
-                                  className="text-red-600 hover:text-red-700"
-                                >
-                                  Cancel
-                                </Button>
-                              </>
-                            )}
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => deleteRoster(roster.id)}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              Delete
-                            </Button>
-                          </div>
+                          <RosterActions
+                            roster={roster}
+                            onEdit={handleEditRoster}
+                            onDelete={deleteRoster}
+                            onView={handleViewRoster}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -722,6 +688,28 @@ export const RosterComponent = () => {
           </Tabs>
         </CardContent>
       </Card>
+      
+      <RosterEditDialog
+        roster={editingRoster}
+        isOpen={isEditDialogOpen}
+        onClose={() => {
+          setIsEditDialogOpen(false);
+          setEditingRoster(null);
+        }}
+        onSave={handleEditSave}
+        profiles={profiles}
+        clients={clients}
+        projects={projects}
+      />
+
+      <RosterViewDialog
+        roster={viewingRoster}
+        isOpen={isViewDialogOpen}
+        onClose={() => {
+          setIsViewDialogOpen(false);
+          setViewingRoster(null);
+        }}
+      />
     </div>
   );
 };

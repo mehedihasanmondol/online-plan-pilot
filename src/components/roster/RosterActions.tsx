@@ -1,31 +1,22 @@
 
 import { ActionDropdown } from "@/components/ui/action-dropdown";
 import { Edit, Trash2, Eye } from "lucide-react";
+import { Roster as RosterType } from "@/types/database";
 
-interface WorkingHour {
-  id: string;
-  status: string;
-}
-
-interface WorkingHoursActionsProps {
-  workingHour: WorkingHour;
-  onEdit: (id: string) => void;
+interface RosterActionsProps {
+  roster: RosterType;
+  onEdit: (roster: RosterType) => void;
   onDelete: (id: string) => void;
-  onView: (id: string) => void;
+  onView: (roster: RosterType) => void;
 }
 
-export const WorkingHoursActions = ({
-  workingHour,
-  onEdit,
-  onDelete,
-  onView
-}: WorkingHoursActionsProps) => {
-  const canEditDelete = workingHour.status !== 'paid';
+export const RosterActions = ({ roster, onEdit, onDelete, onView }: RosterActionsProps) => {
+  const canEditDelete = roster.status !== 'cancelled';
 
   const items = [
     {
       label: "View Details",
-      onClick: () => onView(workingHour.id),
+      onClick: () => onView(roster),
       icon: <Eye className="h-4 w-4" />
     }
   ];
@@ -34,12 +25,12 @@ export const WorkingHoursActions = ({
     items.unshift(
       {
         label: "Edit",
-        onClick: () => onEdit(workingHour.id),
+        onClick: () => onEdit(roster),
         icon: <Edit className="h-4 w-4" />
       },
       {
         label: "Delete",
-        onClick: () => onDelete(workingHour.id),
+        onClick: () => onDelete(roster.id),
         icon: <Trash2 className="h-4 w-4" />,
         destructive: true
       }
