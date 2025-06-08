@@ -123,6 +123,7 @@ export const PayrollComponent = () => {
 
   const fetchWorkingHours = async () => {
     try {
+      // Fetch only working hours that are NOT linked to any payroll
       const { data, error } = await supabase
         .from('working_hours')
         .select(`
@@ -132,11 +133,16 @@ export const PayrollComponent = () => {
           projects!working_hours_project_id_fkey (id, name)
         `)
         .eq('status', 'approved')
+        .not('id', 'in', `(
+          SELECT working_hours_id 
+          FROM payroll_working_hours
+        )`)
         .order('date', { ascending: false });
 
       if (error) throw error;
       setWorkingHours(data as WorkingHour[]);
       
+      // Get profiles that have unlinked approved working hours
       const profileIds = [...new Set(data.map(wh => wh.profile_id))];
       const profilesWithApprovedHours = profiles.filter(p => profileIds.includes(p.id));
       setProfilesWithHours(profilesWithApprovedHours);
@@ -432,7 +438,7 @@ export const PayrollComponent = () => {
                   Quick Payroll Generator
                 </CardTitle>
                 <div className="text-sm text-gray-600">
-                  {profilesWithHours.length} employees with approved hours available
+                  {profilesWithHours.length} employees with unlinked approved hours available
                 </div>
               </div>
             </CardHeader>
@@ -444,16 +450,16 @@ export const PayrollComponent = () => {
                     <span className="font-medium text-blue-900">Quick Generate Feature</span>
                   </div>
                   <p className="text-sm text-blue-700">
-                    Select an employee below to automatically generate their payroll with pre-filled data based on their approved working hours.
+                    Select an employee below to automatically generate their payroll with pre-filled data based on their unlinked approved working hours.
                   </p>
                 </div>
 
                 {profilesWithHours.length === 0 ? (
                   <div className="text-center py-12">
                     <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Approved Hours Available</h3>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No Unlinked Hours Available</h3>
                     <p className="text-gray-600">
-                      No employees have approved working hours available for payroll generation.
+                      No employees have unlinked approved working hours available for payroll generation. All approved hours may already be attached to existing payroll records.
                     </p>
                   </div>
                 ) : (
@@ -533,7 +539,7 @@ export const PayrollComponent = () => {
                               
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                                 <div>
-                                  <span className="text-gray-600">Available Hours:</span>
+                                  <span className="text-gray-600">Unlinked Hours:</span>
                                   <div className="font-medium">{totalHours.toFixed(1)}h</div>
                                 </div>
                                 <div>
