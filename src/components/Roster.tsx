@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -193,32 +192,42 @@ export const RosterComponent = () => {
         : "";
       const finalName = formData.name.trim() || defaultName || generateDefaultRosterName();
       
-      // Call the database function directly using supabase query
-      const { data: result, error: functionError } = await supabase
-        .rpc('create_roster_with_profiles', {
-          p_profile_id: formData.profile_ids[0],
-          p_client_id: formData.client_id,
-          p_project_id: formData.project_id,
-          p_date: formData.date,
-          p_end_date: formData.end_date || null,
-          p_start_time: formData.start_time,
-          p_end_time: formData.end_time,
-          p_total_hours: totalHours,
-          p_notes: formData.notes,
-          p_status: formData.status as 'pending' | 'confirmed' | 'cancelled',
-          p_name: finalName,
-          p_expected_profiles: formData.expected_profiles,
-          p_per_hour_rate: formData.per_hour_rate,
-          p_profile_ids: formData.profile_ids
-        });
+      // Create roster with first profile as primary
+      const { data: roster, error: rosterError } = await supabase
+        .from('rosters')
+        .insert({
+          profile_id: formData.profile_ids[0], // Use first selected profile as primary
+          client_id: formData.client_id,
+          project_id: formData.project_id,
+          date: formData.date,
+          end_date: formData.end_date || null,
+          start_time: formData.start_time,
+          end_time: formData.end_time,
+          total_hours: totalHours,
+          notes: formData.notes,
+          status: formData.status as 'pending' | 'confirmed' | 'cancelled',
+          name: finalName,
+          expected_profiles: formData.expected_profiles,
+          per_hour_rate: formData.per_hour_rate
+        })
+        .select()
+        .single();
 
-      if (functionError) {
-        console.error('Database function error:', functionError);
-        // Fallback to the original method if the function doesn't exist
-        await createRosterFallback(totalHours, finalName);
-      } else {
-        toast({ title: "Success", description: "Roster created successfully" });
-      }
+      if (rosterError) throw rosterError;
+
+      // Create roster_profiles entries for all selected profiles
+      const rosterProfilesData = formData.profile_ids.map(profileId => ({
+        roster_id: roster.id,
+        profile_id: profileId
+      }));
+
+      const { error: profilesError } = await supabase
+        .from('roster_profiles')
+        .insert(rosterProfilesData);
+
+      if (profilesError) throw profilesError;
+
+      toast({ title: "Success", description: "Roster created successfully" });
       
       setIsDialogOpen(false);
       setFormData({
@@ -245,94 +254,6 @@ export const RosterComponent = () => {
       });
     } finally {
       setLoading(false);
-    }
-  };
-
-  // Fallback method if the database function doesn't exist
-  const createRosterFallback = async (totalHours: number, finalName: string) => {
-    console.log('Using fallback roster creation method');
-    
-    // Create roster with first profile as primary
-    const { data: roster, error: rosterError } = await supabase
-      .from('rosters')
-      .insert({
-        profile_id: formData.profile_ids[0], // Use first selected profile as primary
-        client_id: formData.client_id,
-        project_id: formData.project_id,
-        date: formData.date,
-        end_date: formData.end_date || null,
-        start_time: formData.start_time,
-        end_time: formData.end_time,
-        total_hours: totalHours,
-        notes: formData.notes,
-        status: formData.status as 'pending' | 'confirmed' | 'cancelled',
-        name: finalName,
-        expected_profiles: formData.expected_profiles,
-        per_hour_rate: formData.per_hour_rate
-      })
-      .select()
-      .single();
-
-    if (rosterError) throw rosterError;
-
-    // Create roster_profiles entries for all selected profiles
-    const rosterProfilesData = formData.profile_ids.map(profileId => ({
-      roster_id: roster.id,
-      profile_id: profileId
-    }));
-
-    const { error: profilesError } = await supabase
-      .from('roster_profiles')
-      .insert(rosterProfilesData);
-
-    if (profilesError) throw profilesError;
-
-    // Manually trigger working hours creation for fallback
-    await createWorkingHoursManually(roster.id, totalHours);
-    
-    toast({ title: "Success", description: "Roster created successfully" });
-  };
-
-  // Manual working hours creation for fallback
-  const createWorkingHoursManually = async (rosterId: string, totalHours: number) => {
-    try {
-      for (const profileId of formData.profile_ids) {
-        // Get profile hourly rate
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('hourly_rate')
-          .eq('id', profileId)
-          .single();
-
-        const profileRate = profile?.hourly_rate || 0;
-        const usedRate = formData.per_hour_rate > 0 ? formData.per_hour_rate : profileRate;
-
-        // Create working hours for date range
-        let currentDate = new Date(formData.date);
-        const endDate = formData.end_date ? new Date(formData.end_date) : currentDate;
-
-        while (currentDate <= endDate) {
-          await supabase
-            .from('working_hours')
-            .insert({
-              profile_id: profileId,
-              client_id: formData.client_id,
-              project_id: formData.project_id,
-              roster_id: rosterId,
-              date: currentDate.toISOString().split('T')[0],
-              start_time: formData.start_time,
-              end_time: formData.end_time,
-              total_hours: totalHours,
-              hourly_rate: usedRate,
-              payable_amount: totalHours * usedRate,
-              status: 'pending'
-            });
-
-          currentDate.setDate(currentDate.getDate() + 1);
-        }
-      }
-    } catch (error) {
-      console.error('Error creating working hours manually:', error);
     }
   };
 
