@@ -32,6 +32,7 @@ export const RosterEditDialog = ({
 }: RosterEditDialogProps) => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isEditable, setIsEditable] = useState(true);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -50,6 +51,9 @@ export const RosterEditDialog = ({
 
   useEffect(() => {
     if (roster && isOpen) {
+      // Check if roster is editable by checking for approved/paid working hours
+      checkRosterEditability(roster.id);
+      
       setFormData({
         name: roster.name || '',
         profile_ids: roster.roster_profiles?.map(rp => rp.profile_id) || [],
@@ -67,6 +71,35 @@ export const RosterEditDialog = ({
     }
   }, [roster, isOpen]);
 
+  const checkRosterEditability = async (rosterId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('working_hours')
+        .select('id')
+        .eq('roster_id', rosterId)
+        .in('status', ['approved', 'paid'])
+        .limit(1);
+
+      if (error) {
+        console.error('Error checking roster editability:', error);
+        return;
+      }
+
+      const hasApprovedOrPaid = data && data.length > 0;
+      setIsEditable(!hasApprovedOrPaid);
+
+      if (hasApprovedOrPaid) {
+        toast({
+          title: "Warning",
+          description: "This roster cannot be edited because it has working hours that are already approved or paid.",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error checking roster editability:', error);
+    }
+  };
+
   const calculateTotalHours = (startTime: string, endTime: string) => {
     if (!startTime || !endTime) return 0;
     
@@ -81,13 +114,22 @@ export const RosterEditDialog = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!roster) return;
+
+    if (!isEditable) {
+      toast({
+        title: "Error",
+        description: "This roster cannot be edited because it has working hours that are already approved or paid.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setLoading(true);
 
     try {
       const totalHours = calculateTotalHours(formData.start_time, formData.end_time);
       
-      // Update roster
+      // Update roster - the database trigger will handle validation
       const { error: rosterError } = await supabase
         .from('rosters')
         .update({
@@ -106,9 +148,20 @@ export const RosterEditDialog = ({
         })
         .eq('id', roster.id);
 
-      if (rosterError) throw rosterError;
+      if (rosterError) {
+        // Check if it's the validation error from our trigger
+        if (rosterError.message.includes('Cannot edit roster: working hours with approved or paid status exist')) {
+          toast({
+            title: "Cannot Edit Roster",
+            description: "This roster cannot be edited because it has working hours that are already approved or paid.",
+            variant: "destructive"
+          });
+          return;
+        }
+        throw rosterError;
+      }
 
-      // Update roster profiles
+      // Update roster profiles - delete old ones and add new ones
       await supabase
         .from('roster_profiles')
         .delete()
@@ -127,14 +180,17 @@ export const RosterEditDialog = ({
         if (profilesError) throw profilesError;
       }
 
-      toast({ title: "Success", description: "Roster updated successfully" });
+      toast({ 
+        title: "Success", 
+        description: "Roster updated successfully and working hours have been regenerated" 
+      });
       onSave();
       onClose();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating roster:', error);
       toast({
         title: "Error",
-        description: "Failed to update roster",
+        description: error.message || "Failed to update roster",
         variant: "destructive"
       });
     } finally {
@@ -148,7 +204,14 @@ export const RosterEditDialog = ({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-sm sm:max-w-md lg:max-w-3xl max-h-[90vh] overflow-y-auto mx-2 sm:mx-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg sm:text-xl">Edit Roster</DialogTitle>
+          <DialogTitle className="text-lg sm:text-xl">
+            Edit Roster
+            {!isEditable && (
+              <span className="text-sm text-red-600 ml-2 font-normal">
+                (Read-only - has approved/paid working hours)
+              </span>
+            )}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -159,6 +222,7 @@ export const RosterEditDialog = ({
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="Enter roster name"
               className="mt-1"
+              disabled={!isEditable}
             />
           </div>
 
@@ -171,13 +235,18 @@ export const RosterEditDialog = ({
               placeholder="Choose team members"
               showRoleFilter={true}
               className="border rounded-lg p-3 bg-gray-50"
+              disabled={!isEditable}
             />
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label htmlFor="client_id" className="text-sm font-medium">Client</Label>
-              <Select value={formData.client_id} onValueChange={(value) => setFormData({ ...formData, client_id: value })}>
+              <Select 
+                value={formData.client_id} 
+                onValueChange={(value) => setFormData({ ...formData, client_id: value })}
+                disabled={!isEditable}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select client" />
                 </SelectTrigger>
@@ -193,7 +262,11 @@ export const RosterEditDialog = ({
 
             <div>
               <Label htmlFor="project_id" className="text-sm font-medium">Project</Label>
-              <Select value={formData.project_id} onValueChange={(value) => setFormData({ ...formData, project_id: value })}>
+              <Select 
+                value={formData.project_id} 
+                onValueChange={(value) => setFormData({ ...formData, project_id: value })}
+                disabled={!isEditable}
+              >
                 <SelectTrigger className="mt-1">
                   <SelectValue placeholder="Select project" />
                 </SelectTrigger>
@@ -218,6 +291,7 @@ export const RosterEditDialog = ({
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                 required
                 className="mt-1"
+                disabled={!isEditable}
               />
             </div>
             <div>
@@ -229,6 +303,7 @@ export const RosterEditDialog = ({
                 onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                 min={formData.date}
                 className="mt-1"
+                disabled={!isEditable}
               />
             </div>
           </div>
@@ -243,6 +318,7 @@ export const RosterEditDialog = ({
                 onChange={(e) => setFormData({ ...formData, start_time: e.target.value })}
                 required
                 className="mt-1"
+                disabled={!isEditable}
               />
             </div>
             <div>
@@ -254,6 +330,7 @@ export const RosterEditDialog = ({
                 onChange={(e) => setFormData({ ...formData, end_time: e.target.value })}
                 required
                 className="mt-1"
+                disabled={!isEditable}
               />
             </div>
           </div>
@@ -268,6 +345,7 @@ export const RosterEditDialog = ({
                 value={formData.expected_profiles}
                 onChange={(e) => setFormData({ ...formData, expected_profiles: parseInt(e.target.value) || 1 })}
                 className="mt-1"
+                disabled={!isEditable}
               />
             </div>
             <div>
@@ -280,13 +358,18 @@ export const RosterEditDialog = ({
                 value={formData.per_hour_rate}
                 onChange={(e) => setFormData({ ...formData, per_hour_rate: parseFloat(e.target.value) || 0 })}
                 className="mt-1"
+                disabled={!isEditable}
               />
             </div>
           </div>
 
           <div>
             <Label htmlFor="status" className="text-sm font-medium">Status</Label>
-            <Select value={formData.status} onValueChange={(value: 'pending' | 'confirmed' | 'cancelled') => setFormData({ ...formData, status: value })}>
+            <Select 
+              value={formData.status} 
+              onValueChange={(value: 'pending' | 'confirmed' | 'cancelled') => setFormData({ ...formData, status: value })}
+              disabled={!isEditable}
+            >
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
@@ -306,16 +389,19 @@ export const RosterEditDialog = ({
               onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
               placeholder="Additional notes for this roster..."
               className="mt-1 min-h-[80px]"
+              disabled={!isEditable}
             />
           </div>
 
           <div className="flex flex-col sm:flex-row justify-end gap-2">
             <Button type="button" variant="outline" onClick={onClose} className="w-full sm:w-auto">
-              Cancel
+              {isEditable ? "Cancel" : "Close"}
             </Button>
-            <Button type="submit" disabled={loading} className="w-full sm:w-auto">
-              {loading ? "Updating..." : "Update Roster"}
-            </Button>
+            {isEditable && (
+              <Button type="submit" disabled={loading} className="w-full sm:w-auto">
+                {loading ? "Updating..." : "Update Roster"}
+              </Button>
+            )}
           </div>
         </form>
       </DialogContent>
